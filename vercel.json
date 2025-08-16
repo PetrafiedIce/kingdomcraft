@@ -3,5 +3,13 @@
   "name": "kingdomcraft-block",
   "public": true,
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/kingdom/castle", "destination": "/kingdom/castle/index.html" },
+    { "source": "/kingdom/join", "destination": "/kingdom/join/index.html" },
+    { "source": "/kingdom/rules", "destination": "/kingdom/rules/index.html" },
+    { "source": "/kingdom/shop", "destination": "/kingdom/shop/index.html" },
+    { "source": "/kingdom/forums", "destination": "/kingdom/forums/index.html" },
+    { "source": "/kingdom/map", "destination": "/kingdom/map/index.html" }
+  ]
 }
