@@ -47,6 +47,9 @@ body {
   overflow-x: hidden;
 }
 
+/* Ensure anchor targets are not hidden beneath sticky header */
+main section { scroll-margin-top: 90px; }
+
 .bg-texture {
   position: fixed;
   inset: 0;

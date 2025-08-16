@@ -26,7 +26,7 @@
       <span class="brand-text">KingdomCraft</span>
     </a>
 
-    <nav class="site-nav" id="site-nav" role="navigation">
+    <nav class="site-nav" id="site-nav" role="navigation" aria-label="Primary">
       <a href="#features" class="nav-link">Features</a>
       <a href="#uhc" class="nav-link">UHC Events</a>
       <a href="#join" class="btn btn-primary nav-cta">Join Now</a>
@@ -54,15 +54,15 @@
           <h1 class="site-title">KingdomCraft</h1>
         </div>
         <p id="tagline" class="tagline">Forge Your Legacy in Battle!</p>
-        <p class="subtext">Gladiator SMP, ruthless UHC events, and a realm forged in gold and stone.</p>
+        <p class="subtext">Enter a realm of ranked PvP, faction warfare, and epic UHC showdowns. Claim your crown.</p>
         <div class="cta-group">
-          <a href="#join" class="btn btn-primary btn-lg">Join Now</a>
-          <a href="https://discord.gg/kingdomcraft" target="_blank" rel="noopener" class="btn btn-ghost btn-lg discord-link">Discord</a>
+          <a href="#join" class="btn btn-primary btn-lg" aria-label="Join KingdomCraft now">Join Now</a>
+          <a href="https://discord.gg/kingdomcraft" target="_blank" rel="noopener" class="btn btn-ghost btn-lg discord-link" aria-label="Open KingdomCraft Discord">Discord</a>
         </div>
         <div class="ip-card" role="note" aria-label="Server IP">
           <span class="ip-label">Server IP</span>
           <code id="server-ip" class="ip">play.kingdomcraft.net</code>
-          <button class="btn btn-secondary" id="copy-ip-btn" data-copied-label="Copied!">Copy IP</button>
+          <button class="btn btn-secondary" id="copy-ip-btn" data-copied-label="Copied!" type="button" aria-live="polite">Copy IP</button>
         </div>
       </div>
     </section>
@@ -72,7 +72,7 @@
       <div class="feature-grid">
         <article class="feature-card feature-gladiator" data-tilt tabindex="0" aria-label="Gladiator SMP">
           <div class="feature-art" aria-hidden="true">
-            <span class="emoji">⚔️</span>
+            <span class="emoji" role="img" aria-label="Crossed swords">⚔️</span>
           </div>
           <div class="feature-content">
             <h3>Gladiator SMP</h3>
@@ -88,7 +88,7 @@
 
         <article class="feature-card feature-uhc" data-tilt tabindex="0" aria-label="UHC Events">
           <div class="feature-art" aria-hidden="true">
-            <span class="emoji">🛡️</span>
+            <span class="emoji" role="img" aria-label="Shield">🛡️</span>
           </div>
           <div class="feature-content">
             <h3>UHC Events</h3>
@@ -165,7 +165,7 @@
           <p>Add the server using this IP:</p>
           <div class="ip-card ip-large">
             <code id="server-ip-join" class="ip">play.kingdomcraft.net</code>
-            <button class="btn btn-secondary copy-inline" data-copy="play.kingdomcraft.net">Copy</button>
+            <button class="btn btn-secondary copy-inline" data-copy="play.kingdomcraft.net" type="button">Copy</button>
           </div>
         </div>
         <div class="join-card">
