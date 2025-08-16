@@ -1,5 +1,28 @@
-/* KingdomCraft interactivity */
+/* KingdomCraft interactivity + configurable settings */
 (function() {
+  const STORAGE_KEY = 'kc:config';
+  const defaultConfig = {
+    ip: 'play.kingdomcraft.net',
+    discord: 'https://discord.gg/kingdomcraft',
+    tagline: 'Forge Your Legacy in Battle!',
+    eventISO: '' // empty means use weekly schedule (next Saturday 18:00 UTC)
+  };
+
+  function loadConfig() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { ...defaultConfig };
+      const parsed = JSON.parse(raw);
+      return { ...defaultConfig, ...parsed };
+    } catch (_) {
+      return { ...defaultConfig };
+    }
+  }
+
+  function isTruthyString(v) { return typeof v === 'string' && v.trim().length > 0; }
+
+  let currentConfig = loadConfig();
+
   const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Mobile nav toggle
@@ -12,7 +35,7 @@
     });
   }
 
-  // Copy IP helpers
+  // Copy helpers
   async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text);
@@ -30,11 +53,86 @@
     }
   }
 
-  const ip = (document.getElementById('server-ip')?.textContent || 'play.kingdomcraft.gg').trim();
+  // Config application
+  const taglineEl = document.getElementById('tagline');
+  const serverIpHeroEl = document.getElementById('server-ip');
+  const serverIpJoinEl = document.getElementById('server-ip-join');
   const copyIpBtn = document.getElementById('copy-ip-btn');
+  const discordLinks = Array.from(document.querySelectorAll('a.discord-link'));
+  const uhcSection = document.getElementById('uhc');
+  const dateDisplay = document.getElementById('uhc-date-display');
+  const cdEls = {
+    d: document.getElementById('cd-days'),
+    h: document.getElementById('cd-hours'),
+    m: document.getElementById('cd-mins'),
+    s: document.getElementById('cd-secs'),
+  };
+
+  function formatDateForUser(d) {
+    try {
+      const dtf = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' });
+      return dtf.format(d);
+    } catch (_) {
+      return d.toLocaleString();
+    }
+  }
+
+  function computeDefaultUhcDate() {
+    const now = new Date();
+    const day = now.getUTCDay(); // 0..6 Sun..Sat
+    const hour = now.getUTCHours();
+    const targetHour = 18; // 18:00 UTC
+    let daysUntil = (6 - day + 7) % 7; // to Saturday
+    if (daysUntil === 0 && hour >= targetHour) daysUntil = 7;
+    return new Date(Date.UTC(
+      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntil, targetHour, 0, 0
+    ));
+  }
+
+  let target = null; // countdown target
+
+  function updateTargetAndDisplay() {
+    // Set data attribute from config
+    const iso = currentConfig.eventISO;
+    if (uhcSection) {
+      if (isTruthyString(iso)) uhcSection.setAttribute('data-event-iso', iso);
+      else uhcSection.setAttribute('data-event-iso', '');
+    }
+    // Determine target
+    if (isTruthyString(iso)) {
+      const dt = new Date(iso);
+      target = isNaN(dt.valueOf()) ? computeDefaultUhcDate() : dt;
+    } else {
+      target = computeDefaultUhcDate();
+    }
+    if (dateDisplay) {
+      dateDisplay.dateTime = target.toISOString();
+      dateDisplay.textContent = formatDateForUser(target);
+    }
+  }
+
+  function applyConfig(cfg) {
+    if (taglineEl && isTruthyString(cfg.tagline)) taglineEl.textContent = cfg.tagline;
+    if (serverIpHeroEl && isTruthyString(cfg.ip)) serverIpHeroEl.textContent = cfg.ip;
+    if (serverIpJoinEl && isTruthyString(cfg.ip)) serverIpJoinEl.textContent = cfg.ip;
+    if (discordLinks.length) discordLinks.forEach(a => { if (isTruthyString(cfg.discord)) a.href = cfg.discord; });
+    // Update copy buttons data
+    document.querySelectorAll('.copy-inline').forEach(btn => {
+      if (isTruthyString(cfg.ip)) btn.setAttribute('data-copy', cfg.ip);
+    });
+    if (copyIpBtn && isTruthyString(cfg.ip)) copyIpBtn.setAttribute('data-copy', cfg.ip);
+    // Update event target and display
+    updateTargetAndDisplay();
+    updateCountdown();
+  }
+
+  function getCurrentIP() { return (currentConfig && isTruthyString(currentConfig.ip)) ? currentConfig.ip : (serverIpHeroEl?.textContent || defaultConfig.ip); }
+
+  // Bind copy
   if (copyIpBtn) {
     copyIpBtn.addEventListener('click', async () => {
-      const ok = await copyText(ip);
+      const text = copyIpBtn.getAttribute('data-copy') || getCurrentIP();
+      const ok = await copyText(text);
       const prev = copyIpBtn.textContent;
       if (ok) {
         const label = copyIpBtn.getAttribute('data-copied-label') || 'Copied!';
@@ -46,7 +144,7 @@
   }
   document.querySelectorAll('.copy-inline').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const text = btn.getAttribute('data-copy') || ip;
+      const text = btn.getAttribute('data-copy') || getCurrentIP();
       const ok = await copyText(text);
       if (ok) {
         const prev = btn.textContent;
@@ -57,9 +155,9 @@
     });
   });
 
-  // Tilt effect for feature cards
+  // Tilt effect
   function bindTilt(card) {
-    const dampen = 30; // lower is more tilt
+    const dampen = 30;
     let frame = null;
     function onMove(e) {
       const bounds = card.getBoundingClientRect();
@@ -85,43 +183,9 @@
     document.querySelectorAll('[data-tilt]').forEach(el => bindTilt(el));
   }
 
-  // Countdown: Next Saturday 18:00 UTC by default, or data-event-iso override
-  const uhcSection = document.querySelector('#uhc');
-  const cdEls = {
-    d: document.getElementById('cd-days'),
-    h: document.getElementById('cd-hours'),
-    m: document.getElementById('cd-mins'),
-    s: document.getElementById('cd-secs'),
-  };
-  const dateDisplay = document.getElementById('uhc-date-display');
-
-  function computeNextUhcDate() {
-    const iso = uhcSection?.getAttribute('data-event-iso');
-    if (iso) {
-      const dt = new Date(iso);
-      if (!isNaN(dt.valueOf())) return dt;
-    }
-    const now = new Date();
-    const day = now.getUTCDay(); // 0..6 Sun..Sat
-    const hour = now.getUTCHours();
-    const targetHour = 18; // 18:00 UTC
-    let daysUntil = (6 - day + 7) % 7; // to Saturday
-    if (daysUntil === 0 && hour >= targetHour) daysUntil = 7;
-    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntil, targetHour, 0, 0));
-    return next;
-  }
-
-  function formatDateForUser(d) {
-    try {
-      const dtf = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' });
-      return dtf.format(d);
-    } catch (_) {
-      return d.toLocaleString();
-    }
-  }
-
-  let target = computeNextUhcDate();
+  // Countdown
   function updateCountdown() {
+    if (!target || !cdEls.d) return;
     const now = new Date();
     const diffMs = target - now;
     if (diffMs <= 0) {
@@ -142,17 +206,13 @@
     cdEls.m.textContent = String(mins).padStart(2, '0');
     cdEls.s.textContent = String(secs).padStart(2, '0');
   }
-  if (dateDisplay) {
-    dateDisplay.dateTime = target.toISOString();
-    dateDisplay.textContent = formatDateForUser(target);
-  }
-  updateCountdown();
-  const cdTimer = setInterval(updateCountdown, 1000);
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') updateCountdown();
-  });
 
-  // Particles: floating embers in hero
+  // Initialize with current config
+  applyConfig(currentConfig);
+  const cdTimer = setInterval(updateCountdown, 1000);
+  window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') updateCountdown(); });
+
+  // Particles in hero
   const canvas = document.getElementById('particles-canvas');
   if (canvas && !prefersReducedMotion) {
     const ctx = canvas.getContext('2d');
@@ -165,12 +225,13 @@
       height = Math.floor(rect.height);
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(1,0,0,1,0,0);
       ctx.scale(dpr, dpr);
       generateParticles();
     }
 
     function generateParticles() {
-      const count = Math.floor((width * height) / 18000); // density-based
+      const count = Math.floor((width * height) / 18000);
       particles = Array.from({ length: count }).map(() => spawn());
     }
 
@@ -184,10 +245,11 @@
         vy: rand(-0.25, -0.8),
         vx: rand(-0.15, 0.15),
         a: rand(0.25, 0.9),
-        hue: rand(42, 52), // golden
+        hue: rand(42, 52),
       };
     }
 
+    let anim = null;
     function draw() {
       ctx.clearRect(0, 0, width, height);
       for (let p of particles) {
@@ -205,11 +267,18 @@
       anim = requestAnimationFrame(draw);
     }
 
-    let anim = null;
     resize();
     draw();
-    window.addEventListener('resize', () => { cancelAnimationFrame(anim); resize(); draw(); });
+    window.addEventListener('resize', () => { if (anim) cancelAnimationFrame(anim); resize(); draw(); });
   }
+
+  // Live apply when config changes in other tab
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) {
+      currentConfig = loadConfig();
+      applyConfig(currentConfig);
+    }
+  });
 
   // Footer year
   const yearEl = document.getElementById('year');
