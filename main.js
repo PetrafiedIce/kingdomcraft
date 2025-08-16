@@ -235,16 +235,16 @@ const texSide = makeCanvasTexture(drawDirtSide, 256);
 const texBottom = makeCanvasTexture(drawDirtBottom, 256);
 
 const faceMaterials = [
-	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.9, metalness: 0.0, emissive: 0x000000, emissiveIntensity: 0.0 }), // +X right
-	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.9, metalness: 0.0, emissive: 0x000000, emissiveIntensity: 0.0 }), // -X left
-	new THREE.MeshStandardMaterial({ map: texTop, roughness: 0.8, metalness: 0.0, emissive: 0x0a1e0a, emissiveIntensity: 0.0 }), // +Y top
-	new THREE.MeshStandardMaterial({ map: texBottom, roughness: 0.95, metalness: 0.0, emissive: 0x120902, emissiveIntensity: 0.0 }), // -Y bottom
-	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.9, metalness: 0.0, emissive: 0x000000, emissiveIntensity: 0.0 }), // +Z front
-	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.9, metalness: 0.0, emissive: 0x000000, emissiveIntensity: 0.0 }), // -Z back
+	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.85, metalness: 0.0, emissive: 0x111111, emissiveIntensity: 0.08 }), // +X right
+	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.85, metalness: 0.0, emissive: 0x111111, emissiveIntensity: 0.08 }), // -X left
+	new THREE.MeshStandardMaterial({ map: texTop, roughness: 0.8, metalness: 0.0, emissive: 0x1a3a1a, emissiveIntensity: 0.08 }), // +Y top
+	new THREE.MeshStandardMaterial({ map: texBottom, roughness: 0.9, metalness: 0.0, emissive: 0x1a0c05, emissiveIntensity: 0.08 }), // -Y bottom
+	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.85, metalness: 0.0, emissive: 0x111111, emissiveIntensity: 0.08 }), // +Z front
+	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.85, metalness: 0.0, emissive: 0x111111, emissiveIntensity: 0.08 }), // -Z back
 ];
 
 // Smaller cube
-const cubeGeom = new THREE.BoxGeometry(1.4, 1.4, 1.4);
+const cubeGeom = new THREE.BoxGeometry(1.8, 1.8, 1.8);
 const cube = new THREE.Mesh(cubeGeom, faceMaterials);
 scene.add(cube);
 
@@ -280,18 +280,18 @@ const interactionGroup = new THREE.Group();
 scene.add(interactionGroup);
 
 const faceDefs = [
-	{ name: 'right',  normal: new THREE.Vector3( 1, 0, 0), rot: [0, Math.PI/2, 0], pos: [ 0.71, 0, 0], materialIndex: 0, page: 'east.html'  },
-	{ name: 'left',   normal: new THREE.Vector3(-1, 0, 0), rot: [0, -Math.PI/2, 0], pos: [-0.71, 0, 0], materialIndex: 1, page: 'west.html'  },
-	{ name: 'top',    normal: new THREE.Vector3( 0, 1, 0), rot: [-Math.PI/2, 0, 0], pos: [0,  0.71, 0], materialIndex: 2, page: 'top.html'   },
-	{ name: 'bottom', normal: new THREE.Vector3( 0,-1, 0), rot: [ Math.PI/2, 0, 0], pos: [0, -0.71, 0], materialIndex: 3, page: 'bottom.html'},
-	{ name: 'front',  normal: new THREE.Vector3( 0, 0, 1), rot: [0, 0, 0],           pos: [0, 0,  0.71], materialIndex: 4, page: 'south.html' },
-	{ name: 'back',   normal: new THREE.Vector3( 0, 0,-1), rot: [0, Math.PI, 0],     pos: [0, 0, -0.71], materialIndex: 5, page: 'north.html' },
+	{ name: 'right',  normal: new THREE.Vector3( 1, 0, 0), rot: [0, Math.PI/2, 0], pos: [ 0.91, 0, 0], materialIndex: 0, page: 'east.html'  },
+	{ name: 'left',   normal: new THREE.Vector3(-1, 0, 0), rot: [0, -Math.PI/2, 0], pos: [-0.91, 0, 0], materialIndex: 1, page: 'west.html'  },
+	{ name: 'top',    normal: new THREE.Vector3( 0, 1, 0), rot: [-Math.PI/2, 0, 0], pos: [0,  0.91, 0], materialIndex: 2, page: 'top.html'   },
+	{ name: 'bottom', normal: new THREE.Vector3( 0,-1, 0), rot: [ Math.PI/2, 0, 0], pos: [0, -0.91, 0], materialIndex: 3, page: 'bottom.html'},
+	{ name: 'front',  normal: new THREE.Vector3( 0, 0, 1), rot: [0, 0, 0],           pos: [0, 0,  0.91], materialIndex: 4, page: 'south.html' },
+	{ name: 'back',   normal: new THREE.Vector3( 0, 0,-1), rot: [0, Math.PI, 0],     pos: [0, 0, -0.91], materialIndex: 5, page: 'north.html' },
 ];
 
 for (const f of faceDefs) {
 	const plane = new THREE.Mesh(
-		new THREE.PlaneGeometry(1.42, 1.42),
-		new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, depthTest: false })
+		new THREE.PlaneGeometry(1.84, 1.84),
+		new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, depthTest: true })
 	);
 	plane.position.set(...f.pos);
 	plane.rotation.set(...f.rot);
@@ -619,3 +619,16 @@ if (btnQuality) btnQuality.addEventListener('click', () => {
 	fxaaPass.enabled = highQuality ? true : false;
 	composer.setSize(window.innerWidth, window.innerHeight);
 });
+
+const urlParams = new URLSearchParams(location.search);
+const DEBUG_MODE = urlParams.get('debug') === '1';
+
+if (DEBUG_MODE) {
+	const debugGeom = new THREE.BoxGeometry(1.8, 1.8, 1.8);
+	const debugMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: false });
+	const debugCube = new THREE.Mesh(debugGeom, debugMat);
+	scene.add(debugCube);
+	debugCube.position.set(0, 0, 0);
+	const boxHelper = new THREE.BoxHelper(debugCube, 0xff00ff);
+	scene.add(boxHelper);
+}
