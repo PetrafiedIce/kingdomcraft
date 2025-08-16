@@ -1,4 +1,6 @@
-// Spinnable Minecraft-style cube (90° FOV, crisp 16x16 texels, rich hover + bounce + particles)
+// Spinnable Minecraft-style cube (90° FOV, crisp 16x16 texels)
+// Fun extras: hover swap + glow, outline bounce, ring pulses, spin trails, click bounce/sparkles,
+// idle bob, smooth zoom (wheel/pinch) with inertia, double-click face focus, keyboard controls, gyro tilt, SFX
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 const canvas = document.getElementById('scene');
@@ -190,7 +192,20 @@ const glowSprite = new THREE.Sprite(glowMat);
 glowSprite.scale.set(1.35, 1.35, 1.35);
 scene.add(glowSprite);
 
-// Particles
+// Ring pulse sprite (for pulses on hover/click)
+const ringTex = new THREE.TextureLoader().load('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><defs><radialGradient id="rg" cx="50%" cy="50%" r="50%"><stop offset="70%" stop-color="white" stop-opacity="1"/><stop offset="100%" stop-color="white" stop-opacity="0"/></radialGradient></defs><circle cx="64" cy="64" r="54" fill="none" stroke="url(%23rg)" stroke-width="10"/></svg>');
+const ringPulses = [];
+function spawnRingPulse(worldPos, colorHex = 0xd4af37) {
+	const mat = new THREE.SpriteMaterial({ map: ringTex, color: colorHex, transparent: true, opacity: 0.9, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending });
+	const s = new THREE.Sprite(mat);
+	s.position.copy(worldPos);
+	s.scale.set(0.3, 0.3, 0.3);
+	s.userData = { birth: performance.now(), life: 700 };
+	ringPulses.push(s);
+	scene.add(s);
+}
+
+// Particles (sparkles, trails)
 const particlesParent = new THREE.Group();
 scene.add(particlesParent);
 function spawnParticles(colorHex, originWorld, normalWorld, count = 60, speed = 0.6) {
@@ -229,6 +244,79 @@ function spawnParticles(colorHex, originWorld, normalWorld, count = 60, speed = 
 	particlesParent.add(points);
 }
 
+function spawnSpinTrail() {
+	const corners = [
+		new THREE.Vector3( half,  half,  half),
+		new THREE.Vector3( half,  half, -half),
+		new THREE.Vector3( half, -half,  half),
+		new THREE.Vector3( half, -half, -half),
+		new THREE.Vector3(-half,  half,  half),
+		new THREE.Vector3(-half,  half, -half),
+		new THREE.Vector3(-half, -half,  half),
+		new THREE.Vector3(-half, -half, -half),
+	];
+	const corner = corners[Math.floor(Math.random()*corners.length)].clone().applyMatrix4(cube.matrixWorld);
+	const normal = corner.clone().sub(cube.getWorldPosition(new THREE.Vector3())).normalize();
+	spawnParticles(0xffe099, corner, normal, 30, 1.1);
+}
+
+// Minimal SFX
+let audioCtx;
+let audioEnabled = true;
+function getAudio() {
+	if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+	return audioCtx;
+}
+function playSfx(type = 'hover') {
+	if (!audioEnabled) return;
+	const ctx = getAudio();
+	const now = ctx.currentTime;
+	const master = ctx.createGain();
+	master.gain.value = 0.12;
+	master.connect(ctx.destination);
+	const env = ctx.createGain();
+	env.gain.value = 0.0;
+	env.connect(master);
+	function blip(freq, dur = 0.12, t0 = now, type = 'triangle') {
+		const o = ctx.createOscillator();
+		o.type = type;
+		o.frequency.setValueAtTime(freq, t0);
+		o.connect(env);
+		o.start(t0);
+		o.stop(t0 + dur);
+	}
+	switch (type) {
+		case 'hover':
+			blip(880); blip(1320, 0.1, now + 0.04);
+			env.gain.setValueAtTime(0.0001, now);
+			env.gain.exponentialRampToValueAtTime(0.9, now + 0.02);
+			env.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+			break;
+		case 'click':
+			blip(420, 0.08, now, 'sawtooth'); blip(560, 0.08, now + 0.03, 'sawtooth');
+			env.gain.setValueAtTime(0.0001, now);
+			env.gain.exponentialRampToValueAtTime(0.8, now + 0.02);
+			env.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+			break;
+		case 'whoosh': {
+			const noise = ctx.createBufferSource();
+			const len = Math.floor(0.4 * ctx.sampleRate);
+			const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+			const data = buf.getChannelData(0);
+			for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+			noise.buffer = buf;
+			const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 0.6;
+			noise.connect(bp); bp.connect(env);
+			noise.start(now); noise.stop(now + 0.4);
+			env.gain.setValueAtTime(0.0001, now);
+			env.gain.exponentialRampToValueAtTime(0.8, now + 0.03);
+			env.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+			break;
+		}
+	}
+}
+window.addEventListener('pointerdown', () => { try { getAudio().resume(); } catch (e) {} }, { once: true });
+
 // Interaction state
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -241,6 +329,8 @@ let currentScale = 1.0;
 let scaleVel = 0.0;
 let glowTarget = 0.0;
 let glowOpacity = 0.0;
+let lastTrailTime = 0;
+let shake = 0.0;
 
 function setPointerFromEvent(ev) {
 	const rect = renderer.domElement.getBoundingClientRect();
@@ -249,11 +339,20 @@ function setPointerFromEvent(ev) {
 	pointer.set(x, y);
 }
 
-// Drag rotation with inertia
+function faceTargetQuaternion(def) {
+	const e = new THREE.Euler(def.rot[0], def.rot[1], def.rot[2], 'XYZ');
+	const q = new THREE.Quaternion().setFromEuler(e);
+	q.invert();
+	return q;
+}
+let focusTargetQuat = null;
+
+// Drag rotation with inertia + hover handling
 canvas.addEventListener('pointerdown', (e) => {
 	isDragging = true;
 	lastX = e.clientX;
 	lastY = e.clientY;
+	focusTargetQuat = null;
 	try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 });
 
@@ -274,13 +373,11 @@ window.addEventListener('pointermove', (e) => {
 		cube.rotation.x += velX;
 		cube.rotation.y += velY;
 	} else {
-		// Hover detection
 		raycaster.setFromCamera(pointer, camera);
 		const hits = raycaster.intersectObjects(interactionGroup.children, false);
 		if (hits.length) {
 			const hit = hits[0].object;
 			if (hoveredPlane !== hit) {
-				// Reset previous
 				if (hoveredPlane) {
 					const prevMat = faceMaterials[hoveredPlane.userData.def.materialIndex];
 					prevMat.emissiveIntensity = 0.0;
@@ -291,21 +388,20 @@ window.addEventListener('pointermove', (e) => {
 				const mat = faceMaterials[materialIndex];
 				mat.emissive.setHex(0x7a5cff);
 				mat.emissiveIntensity = 0.42;
-				targetScale = 1.08; // bounce target
+				targetScale = 1.08;
 				glowTarget = 0.9;
 				canvas.style.cursor = 'pointer';
-				// Particles burst on enter
 				const worldPos = hit.getWorldPosition(new THREE.Vector3());
 				const worldNormal = normal.clone().applyQuaternion(cube.getWorldQuaternion(new THREE.Quaternion()));
 				const colorByFace = [0xcaa36a, 0xcaa36a, 0x6bdc6e, 0xa0643c, 0xcaa36a, 0xcaa36a];
-				spawnParticles(colorByFace[materialIndex], worldPos, worldNormal, 80, 0.7);
+				spawnParticles(colorByFace[materialIndex], worldPos, worldNormal, 60, 0.6);
+				spawnRingPulse(worldPos, 0xd4af37);
+				playSfx('hover');
 			}
-			// Keep glow on current face center
 			const pos = hit.getWorldPosition(new THREE.Vector3());
 			glowSprite.position.copy(pos);
 			glowSprite.lookAt(camera.position);
 		} else {
-			// Clear
 			if (hoveredPlane) {
 				const prevMat = faceMaterials[hoveredPlane.userData.def.materialIndex];
 				prevMat.emissiveIntensity = 0.0;
@@ -319,26 +415,33 @@ window.addEventListener('pointermove', (e) => {
 	}
 });
 
-// Click bounce + sparkles
+// Click interactions
 canvas.addEventListener('click', () => {
 	if (!hoveredPlane) return;
-	// Stronger spring impulse
-	scaleVel -= 0.15;
-	// Angular impulse
-	velY += 0.06;
-	velX -= 0.04;
-	// Sparkle burst
+	scaleVel -= 0.15; // bounce impulse
+	velY += 0.06; velX -= 0.04;
 	const { materialIndex, normal } = hoveredPlane.userData.def;
 	const worldPos = hoveredPlane.getWorldPosition(new THREE.Vector3());
 	const worldNormal = normal.clone().applyQuaternion(cube.getWorldQuaternion(new THREE.Quaternion()));
 	const colorByFace = [0xffd37a, 0xffd37a, 0x88ff88, 0xd08a55, 0xffd37a, 0xffd37a];
 	spawnParticles(colorByFace[materialIndex], worldPos, worldNormal, 120, 1.0);
+	spawnRingPulse(worldPos, 0xffe699);
+	shake = Math.min(0.02, shake + 0.01);
+	playSfx('click');
 });
 
-// Inverted wheel dolly zoom (scroll up -> zoom in) with inertia
-function setCameraZ(z) {
-	targetCameraZ = Math.max(1.2, Math.min(12, z));
-}
+// Double-click: focus hovered face (rotate cube)
+canvas.addEventListener('dblclick', () => {
+	if (!hoveredPlane) return;
+	const def = hoveredPlane.userData.def;
+	focusTargetQuat = faceTargetQuaternion(def);
+	// Slight zoom-in
+	targetCameraZ = Math.max(2.2, camera.position.z * 0.9);
+	playSfx('whoosh');
+});
+
+// Wheel dolly zoom (scroll up -> zoom in) with inertia
+function setCameraZ(z) { targetCameraZ = Math.max(1.2, Math.min(12, z)); }
 window.addEventListener('wheel', (e) => {
 	e.preventDefault();
 	const factor = Math.exp(e.deltaY * 0.001); // inverted
@@ -369,39 +472,81 @@ canvas.addEventListener('pointermove', (e) => {
 	}
 });
 
+// Keyboard controls
+window.addEventListener('keydown', (e) => {
+	switch (e.code) {
+		case 'ArrowLeft': cube.rotation.y -= 0.15; break;
+		case 'ArrowRight': cube.rotation.y += 0.15; break;
+		case 'ArrowUp': cube.rotation.x -= 0.15; break;
+		case 'ArrowDown': cube.rotation.x += 0.15; break;
+		case 'Equal': case 'NumpadAdd': setCameraZ(camera.position.z * 0.9); break;
+		case 'Minus': case 'NumpadSubtract': setCameraZ(camera.position.z * 1.1); break;
+		case 'Space': scaleVel -= 0.12; break; // bounce
+		case 'KeyF': if (hoveredPlane) { focusTargetQuat = faceTargetQuaternion(hoveredPlane.userData.def); playSfx('whoosh'); } break;
+	}
+});
+
+// Gyro tilt on mobile
+let tiltX = 0, tiltY = 0;
+if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
+	// iOS permission flow
+	window.addEventListener('click', async function onFirstClick() {
+		try { await DeviceOrientationEvent.requestPermission(); } catch (e) {}
+		window.removeEventListener('click', onFirstClick);
+	});
+}
+window.addEventListener('deviceorientation', (e) => {
+	const ax = (e.beta || 0) * (Math.PI / 180);
+	const ay = (e.gamma || 0) * (Math.PI / 180);
+	tiltX = ax * 0.05; // damped
+	tiltY = ay * 0.05;
+});
+
 // Idle bob for flair
 let bobPhase = 0;
 
 function animate(now = 0) {
 	requestAnimationFrame(animate);
-	// Smooth zoom to target
+	// Smooth zoom
 	camera.position.z += (targetCameraZ - camera.position.z) * 0.15;
+	// Screen shake
+	if (shake > 0.0001) { shake *= 0.9; camera.position.x = (Math.random()-0.5) * shake; camera.position.y = (Math.random()-0.5) * shake; } else { camera.position.x = 0; camera.position.y = 0; }
 	camera.lookAt(0, 0, 0);
 	// Springy scale
-	const stiffness = 0.18; // spring k
-	const damping = 0.78;   // damping factor
+	const stiffness = 0.18; const damping = 0.78;
 	const force = (targetScale - currentScale) * stiffness;
 	scaleVel = scaleVel * damping + force;
 	currentScale += scaleVel;
 	cube.scale.set(currentScale, currentScale, currentScale);
-	// Edges follow all transforms including scale
+	// If focusing a face, slerp towards it
+	if (focusTargetQuat) {
+		cube.quaternion.slerp(focusTargetQuat, 0.15);
+		if (cube.quaternion.angleTo(focusTargetQuat) < 0.005) focusTargetQuat = null;
+	}
+	// Edges sync
 	edges.position.copy(cube.position);
 	edges.rotation.copy(cube.rotation);
 	edges.scale.copy(cube.scale);
-	// Glow opacity + pulse scale
+	// Glow pulse
 	glowOpacity += (glowTarget - glowOpacity) * 0.12;
 	glowMat.opacity = glowOpacity * (0.85 + 0.15 * Math.sin(now * 0.012));
 	const pulse = 1.15 + 0.15 * Math.sin(now * 0.01);
 	glowSprite.scale.set(pulse, pulse, pulse);
 	// Inertia
-	if (!isDragging) {
+	if (!isDragging && !focusTargetQuat) {
 		cube.rotation.y += (velY *= 0.95);
 		cube.rotation.x += (velX *= 0.95);
 	}
+	// Gyro tilt (additive)
+	cube.rotation.x += (tiltX - 0) * 0.02;
+	cube.rotation.y += (tiltY - 0) * 0.02;
 	// Idle bob
 	bobPhase += 0.0025;
 	cube.position.y = Math.sin(bobPhase) * 0.02;
 	edges.position.y = cube.position.y;
+	// Spin trails based on angular speed
+	const spinSpeed = Math.abs(velX) + Math.abs(velY);
+	if (spinSpeed > 0.035 && now - lastTrailTime > 60) { spawnSpinTrail(); lastTrailTime = now; }
 	// Update particles
 	const nowMs = performance.now();
 	for (let i = particlesParent.children.length - 1; i >= 0; i--) {
@@ -416,14 +561,23 @@ function animate(now = 0) {
 			positions.array[j*3 + 0] += velocities.array[j*3 + 0] * 0.016;
 			positions.array[j*3 + 1] += velocities.array[j*3 + 1] * 0.016;
 			positions.array[j*3 + 2] += velocities.array[j*3 + 2] * 0.016;
-			// light upward drift
-			velocities.array[j*3 + 1] += 0.0006;
+			velocities.array[j*3 + 1] += 0.0006; // gentle up drift
 		}
 		positions.needsUpdate = true;
 		p.material.opacity = 1.0 - t;
 	}
-	// Subtle edge color shimmer
-	const huePulse = (Math.sin(now * 0.0015) * 0.5 + 0.5) * 0.2 + 0.6; // 0.6..0.8
+	// Update ring pulses
+	for (let i = ringPulses.length - 1; i >= 0; i--) {
+		const s = ringPulses[i];
+		const age = nowMs - s.userData.birth;
+		const t = age / s.userData.life;
+		if (t >= 1) { scene.remove(s); ringPulses.splice(i, 1); continue; }
+		s.scale.setScalar(0.3 + t * 1.6);
+		s.material.opacity = (1 - t) * 0.9;
+		s.lookAt(camera.position);
+	}
+	// Subtle edge shimmer
+	const huePulse = (Math.sin(now * 0.0015) * 0.5 + 0.5) * 0.2 + 0.6;
 	const r = 180 + Math.floor(huePulse * 40);
 	const g = 140 + Math.floor(huePulse * 20);
 	const b = 60 + Math.floor(huePulse * 10);
