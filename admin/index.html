@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="../styles.css">
   <style>
     .admin-wrap { max-width: 920px; margin: 40px auto; padding: 16px; }
-    .admin-card { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border: 1px solid rgba(212,175,55,0.25); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 20px; }
+    .admin-card { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border: 1px solid rgba(212,175,55,0.25); border-radius: 16px; box-shadow: var(--shadow-lg); padding: 20px; pointer-events: auto; }
     .admin-header { display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px; }
     .admin-title { font-family: var(--font-display); margin: 0; letter-spacing: 0.5px; }
     .admin-sub { color: var(--muted); margin: 4px 0 0; }
@@ -20,6 +20,7 @@
     .pin-error { color: var(--danger); min-height: 18px; font-size: 14px; }
     .keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
     .keypad .btn { width: 72px; height: 56px; font-weight: 700; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .pin-input-hidden { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; left: -9999px; top: -9999px; }
 
     .settings-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
     .settings-grid .full { grid-column: 1 / -1; }
@@ -47,6 +48,7 @@
       <div id="lock" class="lock-screen" aria-live="polite">
         <p class="hint">Enter PIN to unlock</p>
         <div id="pinDisplay" class="pin-display" aria-label="PIN input" aria-live="polite">____</div>
+        <input id="pinInput" class="pin-input-hidden" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="one-time-code" aria-hidden="true">
         <div class="pin-error" id="pinError"></div>
         <div class="keypad" role="group" aria-label="Keypad">
           <button class="btn" type="button" data-key="1">1</button>

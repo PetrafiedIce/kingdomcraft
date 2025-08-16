@@ -48,6 +48,7 @@
   const panel = document.getElementById('panel');
   const pinDisplay = document.getElementById('pinDisplay');
   const pinError = document.getElementById('pinError');
+  const pinInput = document.getElementById('pinInput');
 
   function setUnlocked(u) {
     if (u) sessionStorage.setItem(SESSION_UNLOCK, '1'); else sessionStorage.removeItem(SESSION_UNLOCK);
@@ -58,37 +59,48 @@
   function initKeypad() {
     let buff = '';
     function render() { pinDisplay.textContent = buff.padEnd(4, '_').replace(/\d/g, '•'); }
-    function clear(msg) { buff = ''; render(); if (msg) { pinError.textContent = msg; setTimeout(() => pinError.textContent = '', 1400); } }
+    function clear(msg) { buff = ''; render(); pinInput.value = ''; if (msg) { pinError.textContent = msg; setTimeout(() => pinError.textContent = '', 1400); } }
 
-    function handle(btn) {
-      const key = typeof btn === 'string' ? btn : btn.getAttribute('data-key');
-      const action = typeof btn === 'string' ? '' : btn.getAttribute('data-action');
-      if (key) {
-        if (buff.length < 4) buff += key;
-        render();
-        return;
-      }
-      if (action === 'clear') { clear(''); return; }
-      if (action === 'enter') {
-        if (buff === PIN) { setUnlocked(true); initForm(); }
-        else { clear('Incorrect PIN'); }
-      }
+    function finalize() {
+      if (buff === PIN) { setUnlocked(true); initForm(); }
+      else { clear('Incorrect PIN'); }
+    }
+
+    function pushDigit(d) {
+      if (buff.length >= 4) return;
+      buff += d; pinInput.value = buff; render();
+      if (buff.length === 4) finalize();
     }
 
     lock.querySelectorAll('.keypad .btn').forEach(btn => {
-      const onPress = (e) => { e.preventDefault(); e.stopPropagation(); handle(btn); };
+      const onPress = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const key = btn.getAttribute('data-key');
+        const action = btn.getAttribute('data-action');
+        if (key) { pushDigit(key); return; }
+        if (action === 'clear') { clear(''); return; }
+        if (action === 'enter') { finalize(); return; }
+      };
       btn.addEventListener('pointerdown', onPress);
       btn.addEventListener('click', onPress);
       btn.addEventListener('touchstart', onPress, { passive: false });
     });
 
+    // Hidden input focus to capture any system quirks
+    pinInput.focus();
+    pinInput.addEventListener('input', () => {
+      const digits = (pinInput.value || '').replace(/\D/g, '').slice(0,4);
+      if (digits !== buff) { buff = digits; render(); }
+      if (buff.length === 4) finalize();
+    });
+
     // Keyboard support
     document.addEventListener('keydown', (e) => {
-      if (panel.style.display !== 'none') return; // unlocked, ignore
+      if (panel.style.display !== 'none') return;
       const k = e.key;
-      if (/^\d$/.test(k)) { e.preventDefault(); handle(k); return; }
-      if (k === 'Backspace' || k === 'Delete') { e.preventDefault(); handle({ getAttribute: () => null, }); buff = buff.slice(0, -1); render(); return; }
-      if (k === 'Enter') { e.preventDefault(); handle({ getAttribute: (n) => (n === 'data-action' ? 'enter' : null) }); return; }
+      if (/^\d$/.test(k)) { e.preventDefault(); pushDigit(k); return; }
+      if (k === 'Backspace' || k === 'Delete') { e.preventDefault(); buff = buff.slice(0, -1); pinInput.value = buff; render(); return; }
+      if (k === 'Enter') { e.preventDefault(); finalize(); return; }
       if (k === 'Escape') { e.preventDefault(); clear(''); return; }
     });
 
