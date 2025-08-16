@@ -9,11 +9,21 @@
     eventISO: ''
   };
 
-  function loadConfig() {
+  async function readServerConfig() {
+    try { const res = await fetch('/api/config', { cache: 'no-store' }); if (!res.ok) throw new Error('bad'); return await res.json(); } catch(_) { return defaultConfig; }
+  }
+  async function writeServerConfig(cfg) {
+    const res = await fetch('/api/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) });
+    if (!res.ok) throw new Error('Save failed');
+    const data = await res.json();
+    return data.config || cfg;
+  }
+
+  function loadLocal() {
     try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? { ...defaultConfig, ...JSON.parse(raw) } : { ...defaultConfig }; }
     catch(_) { return { ...defaultConfig }; }
   }
-  function saveConfig(cfg) { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
+  function saveLocal(cfg) { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
 
   function toLocalDatetimeValue(iso) {
     if (!iso) return '';
@@ -75,8 +85,9 @@
   const resetBtn = document.getElementById('resetBtn');
   const statusEl = document.getElementById('status');
 
-  function initForm() {
-    const cfg = loadConfig();
+  async function initForm() {
+    // try server, fallback to local cache
+    const cfg = await readServerConfig().catch(() => loadLocal());
     ipEl.value = cfg.ip || '';
     discordEl.value = cfg.discord || '';
     taglineEl.value = cfg.tagline || '';
@@ -88,26 +99,34 @@
 
   weeklyEl.addEventListener('change', () => { eventEl.disabled = weeklyEl.checked; if (weeklyEl.checked) eventEl.value = ''; });
 
-  function showStatus(msg) { statusEl.textContent = msg; setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = ''; }, 1600); }
+  function showStatus(msg, ok=true) { statusEl.textContent = msg; statusEl.style.color = ok ? 'var(--muted)' : 'var(--danger)'; setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = ''; }, 2000); }
 
-  saveBtn.addEventListener('click', () => {
-    const cfg = loadConfig();
-    cfg.ip = ipEl.value.trim() || defaultConfig.ip;
-    cfg.discord = discordEl.value.trim() || defaultConfig.discord;
-    cfg.tagline = taglineEl.value.trim() || defaultConfig.tagline;
-    cfg.eventISO = weeklyEl.checked ? '' : fromLocalDatetimeValue(eventEl.value.trim());
-    saveConfig(cfg);
-    showStatus('Saved');
+  saveBtn.addEventListener('click', async () => {
+    const cfg = {
+      ip: (ipEl.value || '').trim() || defaultConfig.ip,
+      discord: (discordEl.value || '').trim() || defaultConfig.discord,
+      tagline: (taglineEl.value || '').trim() || defaultConfig.tagline,
+      eventISO: weeklyEl.checked ? '' : fromLocalDatetimeValue((eventEl.value || '').trim())
+    };
+    try {
+      const saved = await writeServerConfig(cfg);
+      saveLocal(saved);
+      showStatus('Saved');
+    } catch (e) {
+      showStatus('Save failed', false);
+    }
   });
 
-  resetBtn.addEventListener('click', () => {
+  resetBtn.addEventListener('click', async () => {
     if (!confirm('Reset all settings to defaults?')) return;
-    saveConfig(defaultConfig);
-    initForm();
-    showStatus('Reset');
+    try {
+      const saved = await writeServerConfig(defaultConfig);
+      saveLocal(saved);
+      await initForm();
+      showStatus('Reset');
+    } catch (_) { showStatus('Reset failed', false); }
   });
 
-  // boot
   if (sessionStorage.getItem(SESSION_UNLOCK) === '1') { setUnlocked(true); initForm(); }
   else { setUnlocked(false); initKeypad(); }
 })();
