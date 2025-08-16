@@ -88,3 +88,44 @@ body {
   transform: translate(-50%, -120%);
   white-space: nowrap;
 }
+
+/* Inner page layout */
+.kc-page {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 96px 20px 48px;
+}
+.kc-page .kc-page-inner {
+  max-width: 760px;
+  width: 100%;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(12,14,20,0.6), rgba(12,14,20,0.3));
+  border: 1px solid rgba(209,184,127,0.18);
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 6px 30px rgba(0,0,0,0.35);
+}
+.kc-page h1 {
+  margin: 0 0 10px 0;
+  font-size: 40px;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+.kc-page p {
+  margin: 0 0 18px 0;
+  color: #cfd6e6;
+}
+.kc-link-home {
+  display: inline-block;
+  color: #0b0f1a;
+  background: var(--accent);
+  padding: 10px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+}
+.kc-link-home:hover {
+  filter: brightness(1.08);
+}
