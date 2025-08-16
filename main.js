@@ -1,4 +1,4 @@
-// Spinnable Minecraft-style cube (90° FOV, crisp 16x16 texels, hover glow + bounce)
+// Spinnable Minecraft-style cube (90° FOV, crisp 16x16 texels, rich hover + bounce + particles)
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 const canvas = document.getElementById('scene');
@@ -14,9 +14,10 @@ renderer.setClearColor(0x000000, 1);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
-// Perspective camera (feels non-orthographic)
+// Camera (perspective, 90° FOV)
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 0, 3.6);
+let targetCameraZ = 3.6;
+camera.position.set(0, 0, targetCameraZ);
 camera.lookAt(0, 0, 0);
 
 // Lights
@@ -25,7 +26,7 @@ scene.add(ambient);
 const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
 keyLight.position.set(3, 5, 2);
 scene.add(keyLight);
-const rimLight = new THREE.DirectionalLight(0x7a88ff, 0.3);
+const rimLight = new THREE.DirectionalLight(0x7a88ff, 0.35);
 rimLight.position.set(-3, 2, -4);
 scene.add(rimLight);
 
@@ -159,9 +160,9 @@ const edges = new THREE.LineSegments(
 );
 scene.add(edges);
 
-// Interaction planes (one per face)
+// Interaction planes (parented to cube so they rotate with it)
 const interactionGroup = new THREE.Group();
-scene.add(interactionGroup);
+cube.add(interactionGroup);
 const half = cubeSize / 2;
 const faceDefs = [
 	{ name: 'right',  normal: new THREE.Vector3( 1, 0, 0), rot: [0, Math.PI/2, 0], pos: [ half, 0, 0], materialIndex: 0 },
@@ -186,8 +187,47 @@ for (const def of faceDefs) {
 const glowTex = new THREE.TextureLoader().load('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="white" stop-opacity="1"/><stop offset="100%" stop-color="white" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="28" fill="url(%23g)"/></svg>');
 const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0xd4af37, transparent: true, opacity: 0.0, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending });
 const glowSprite = new THREE.Sprite(glowMat);
-glowSprite.scale.set(1.4, 1.4, 1.4);
+glowSprite.scale.set(1.35, 1.35, 1.35);
 scene.add(glowSprite);
+
+// Particles
+const particlesParent = new THREE.Group();
+scene.add(particlesParent);
+function spawnParticles(colorHex, originWorld, normalWorld, count = 60, speed = 0.6) {
+	const geom = new THREE.BufferGeometry();
+	const positions = new Float32Array(count * 3);
+	const velocities = new Float32Array(count * 3);
+	const colors = new Float32Array(count * 3);
+	const base = new THREE.Color(colorHex);
+	for (let i = 0; i < count; i++) {
+		const dir = new THREE.Vector3(
+			(Math.random() * 2 - 1),
+			(Math.random() * 2 - 1),
+			(Math.random() * 2 - 1)
+		).normalize().multiplyScalar(Math.random() * 0.4 + 0.1);
+		dir.add(normalWorld.clone().multiplyScalar(Math.random() * 0.8 + 0.2));
+		const vx = dir.x * speed * (0.4 + Math.random() * 0.8);
+		const vy = dir.y * speed * (0.4 + Math.random() * 0.8);
+		const vz = dir.z * speed * (0.4 + Math.random() * 0.8);
+		positions[i*3 + 0] = originWorld.x;
+		positions[i*3 + 1] = originWorld.y;
+		positions[i*3 + 2] = originWorld.z;
+		velocities[i*3 + 0] = vx;
+		velocities[i*3 + 1] = vy;
+		velocities[i*3 + 2] = vz;
+		const tint = 0.8 + Math.random() * 0.4;
+		colors[i*3 + 0] = base.r * tint;
+		colors[i*3 + 1] = base.g * tint;
+		colors[i*3 + 2] = base.b * tint;
+	}
+	geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+	geom.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
+	geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+	const mat = new THREE.PointsMaterial({ size: 0.05, sizeAttenuation: true, transparent: true, opacity: 1.0, vertexColors: true, depthWrite: false, blending: THREE.AdditiveBlending });
+	const points = new THREE.Points(geom, mat);
+	points.userData = { birth: performance.now(), life: 1000 + Math.random()*600 };
+	particlesParent.add(points);
+}
 
 // Interaction state
 const raycaster = new THREE.Raycaster();
@@ -201,7 +241,6 @@ let currentScale = 1.0;
 let scaleVel = 0.0;
 let glowTarget = 0.0;
 let glowOpacity = 0.0;
-let timeMs = 0;
 
 function setPointerFromEvent(ev) {
 	const rect = renderer.domElement.getBoundingClientRect();
@@ -241,53 +280,103 @@ window.addEventListener('pointermove', (e) => {
 		if (hits.length) {
 			const hit = hits[0].object;
 			if (hoveredPlane !== hit) {
-				clearHover();
+				// Reset previous
+				if (hoveredPlane) {
+					const prevMat = faceMaterials[hoveredPlane.userData.def.materialIndex];
+					prevMat.emissiveIntensity = 0.0;
+					prevMat.emissive.setHex(0x000000);
+				}
 				hoveredPlane = hit;
-				const { materialIndex } = hit.userData.def;
+				const { materialIndex, normal } = hit.userData.def;
 				const mat = faceMaterials[materialIndex];
 				mat.emissive.setHex(0x7a5cff);
-				mat.emissiveIntensity = 0.35;
-				targetScale = 1.07; // bounce target
-				glowTarget = 0.8;
+				mat.emissiveIntensity = 0.42;
+				targetScale = 1.08; // bounce target
+				glowTarget = 0.9;
 				canvas.style.cursor = 'pointer';
+				// Particles burst on enter
+				const worldPos = hit.getWorldPosition(new THREE.Vector3());
+				const worldNormal = normal.clone().applyQuaternion(cube.getWorldQuaternion(new THREE.Quaternion()));
+				const colorByFace = [0xcaa36a, 0xcaa36a, 0x6bdc6e, 0xa0643c, 0xcaa36a, 0xcaa36a];
+				spawnParticles(colorByFace[materialIndex], worldPos, worldNormal, 80, 0.7);
 			}
-			// Keep glow on face center
+			// Keep glow on current face center
 			const pos = hit.getWorldPosition(new THREE.Vector3());
 			glowSprite.position.copy(pos);
+			glowSprite.lookAt(camera.position);
 		} else {
-			clearHover();
+			// Clear
+			if (hoveredPlane) {
+				const prevMat = faceMaterials[hoveredPlane.userData.def.materialIndex];
+				prevMat.emissiveIntensity = 0.0;
+				prevMat.emissive.setHex(0x000000);
+			}
+			hoveredPlane = null;
+			targetScale = 1.0;
+			glowTarget = 0.0;
+			canvas.style.cursor = 'default';
 		}
 	}
 });
 
-function clearHover() {
-	if (hoveredPlane) {
-		const { materialIndex } = hoveredPlane.userData.def;
-		const mat = faceMaterials[materialIndex];
-		mat.emissiveIntensity = 0.0;
-		mat.emissive.setHex(0x000000);
-	}
-	hoveredPlane = null;
-	targetScale = 1.0;
-	glowTarget = 0.0;
-	canvas.style.cursor = 'default';
-}
+// Click bounce + sparkles
+canvas.addEventListener('click', () => {
+	if (!hoveredPlane) return;
+	// Stronger spring impulse
+	scaleVel -= 0.15;
+	// Angular impulse
+	velY += 0.06;
+	velX -= 0.04;
+	// Sparkle burst
+	const { materialIndex, normal } = hoveredPlane.userData.def;
+	const worldPos = hoveredPlane.getWorldPosition(new THREE.Vector3());
+	const worldNormal = normal.clone().applyQuaternion(cube.getWorldQuaternion(new THREE.Quaternion()));
+	const colorByFace = [0xffd37a, 0xffd37a, 0x88ff88, 0xd08a55, 0xffd37a, 0xffd37a];
+	spawnParticles(colorByFace[materialIndex], worldPos, worldNormal, 120, 1.0);
+});
 
-// Inverted wheel dolly zoom (scroll up -> zoom in)
+// Inverted wheel dolly zoom (scroll up -> zoom in) with inertia
 function setCameraZ(z) {
-	camera.position.z = Math.max(1.2, Math.min(12, z));
+	targetCameraZ = Math.max(1.2, Math.min(12, z));
 }
 window.addEventListener('wheel', (e) => {
 	e.preventDefault();
-	// Inverted direction vs previous behavior
-	const factor = Math.exp(e.deltaY * 0.001);
+	const factor = Math.exp(e.deltaY * 0.001); // inverted
 	setCameraZ(camera.position.z * factor);
-	camera.lookAt(0, 0, 0);
 }, { passive: false });
+
+// Pinch zoom support
+const activePointers = new Map();
+let pinchLastDist = 0;
+function getActivePointerArray() { return Array.from(activePointers.values()); }
+canvas.addEventListener('pointerdown', (e) => { activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); });
+canvas.addEventListener('pointerup',   (e) => { activePointers.delete(e.pointerId); pinchLastDist = 0; });
+canvas.addEventListener('pointercancel', (e) => { activePointers.delete(e.pointerId); pinchLastDist = 0; });
+canvas.addEventListener('pointermove', (e) => {
+	if (activePointers.has(e.pointerId)) activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+	const pts = getActivePointerArray();
+	if (pts.length === 2) {
+		const dx = pts[0].x - pts[1].x;
+		const dy = pts[0].y - pts[1].y;
+		const dist = Math.hypot(dx, dy);
+		if (pinchLastDist > 0) {
+			const factor = pinchLastDist / dist;
+			setCameraZ(camera.position.z * factor);
+		}
+		pinchLastDist = dist;
+	} else {
+		pinchLastDist = 0;
+	}
+});
+
+// Idle bob for flair
+let bobPhase = 0;
 
 function animate(now = 0) {
 	requestAnimationFrame(animate);
-	timeMs = now;
+	// Smooth zoom to target
+	camera.position.z += (targetCameraZ - camera.position.z) * 0.15;
+	camera.lookAt(0, 0, 0);
 	// Springy scale
 	const stiffness = 0.18; // spring k
 	const damping = 0.78;   // damping factor
@@ -295,27 +384,51 @@ function animate(now = 0) {
 	scaleVel = scaleVel * damping + force;
 	currentScale += scaleVel;
 	cube.scale.set(currentScale, currentScale, currentScale);
+	// Edges follow all transforms including scale
+	edges.position.copy(cube.position);
+	edges.rotation.copy(cube.rotation);
+	edges.scale.copy(cube.scale);
 	// Glow opacity + pulse scale
 	glowOpacity += (glowTarget - glowOpacity) * 0.12;
 	glowMat.opacity = glowOpacity * (0.85 + 0.15 * Math.sin(now * 0.012));
-	const pulse = 1.2 + 0.15 * Math.sin(now * 0.01);
+	const pulse = 1.15 + 0.15 * Math.sin(now * 0.01);
 	glowSprite.scale.set(pulse, pulse, pulse);
 	// Inertia
 	if (!isDragging) {
 		cube.rotation.y += (velY *= 0.95);
 		cube.rotation.x += (velX *= 0.95);
 	}
-	// Sync edges
-	edges.position.copy(cube.position);
-	edges.rotation.copy(cube.rotation);
-	// Slight edge color shimmer for style
+	// Idle bob
+	bobPhase += 0.0025;
+	cube.position.y = Math.sin(bobPhase) * 0.02;
+	edges.position.y = cube.position.y;
+	// Update particles
+	const nowMs = performance.now();
+	for (let i = particlesParent.children.length - 1; i >= 0; i--) {
+		const p = particlesParent.children[i];
+		const life = p.userData.life;
+		const age = nowMs - p.userData.birth;
+		if (age > life) { particlesParent.remove(p); p.geometry.dispose(); p.material.dispose(); continue; }
+		const t = age / life;
+		const positions = p.geometry.getAttribute('position');
+		const velocities = p.geometry.getAttribute('velocity');
+		for (let j = 0; j < positions.count; j++) {
+			positions.array[j*3 + 0] += velocities.array[j*3 + 0] * 0.016;
+			positions.array[j*3 + 1] += velocities.array[j*3 + 1] * 0.016;
+			positions.array[j*3 + 2] += velocities.array[j*3 + 2] * 0.016;
+			// light upward drift
+			velocities.array[j*3 + 1] += 0.0006;
+		}
+		positions.needsUpdate = true;
+		p.material.opacity = 1.0 - t;
+	}
+	// Subtle edge color shimmer
 	const huePulse = (Math.sin(now * 0.0015) * 0.5 + 0.5) * 0.2 + 0.6; // 0.6..0.8
 	const r = 180 + Math.floor(huePulse * 40);
 	const g = 140 + Math.floor(huePulse * 20);
 	const b = 60 + Math.floor(huePulse * 10);
 	edges.material.color.setRGB(r/255, g/255, b/255);
 	// Render
-	camera.lookAt(0, 0, 0);
 	renderer.render(scene, camera);
 }
 requestAnimationFrame(animate);
