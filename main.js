@@ -3,6 +3,11 @@
 
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { gsap } from 'https://unpkg.com/gsap@3.12.5/index.js?module';
+import { EffectComposer } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'https://unpkg.com/three@0.160.0/examples/jsm/shaders/FXAAShader.js';
 
 const appEl = document.getElementById('app');
 const canvas = document.getElementById('scene');
@@ -25,6 +30,7 @@ function unlockAudio() {
 window.addEventListener('pointerdown', unlockAudio, { once: true });
 
 function playSfx(type = 'chime') {
+	if (!audioEnabled) return;
 	const ctx = getAudio();
 	const now = ctx.currentTime;
 	const master = ctx.createGain();
@@ -116,9 +122,28 @@ scene.background = new THREE.Color(0x0e0a1f);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
 camera.position.set(0, 0.4, 4.2);
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 renderer.setSize(window.innerWidth, window.innerHeight);
+
+// Postprocessing
+let composer, renderPass, bloomPass, fxaaPass;
+function setupComposer() {
+	composer = new EffectComposer(renderer);
+	renderPass = new RenderPass(scene, camera);
+	composer.addPass(renderPass);
+
+	bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.9, 0.3);
+	composer.addPass(bloomPass);
+
+	fxaaPass = new ShaderPass(FXAAShader);
+	fxaaPass.material.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
+	composer.addPass(fxaaPass);
+}
+setupComposer();
 
 // Lights
 const ambient = new THREE.AmbientLight(0xffffff, 0.55);
@@ -217,6 +242,13 @@ const edges = new THREE.LineSegments(
 	new THREE.LineBasicMaterial({ color: 0x1a142f, linewidth: 1 })
 );
 scene.add(edges);
+
+// Hover glow sprite
+const glowTex = new THREE.TextureLoader().load('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="white" stop-opacity="1"/><stop offset="100%" stop-color="white" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="28" fill="url(%23g)"/></svg>');
+const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0xd4af37, transparent: true, opacity: 0.0, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending });
+const glowSprite = new THREE.Sprite(glowMat);
+glowSprite.scale.set(1.6, 1.6, 1.6);
+scene.add(glowSprite);
 
 // Interaction planes (one per face) to capture clicks precisely
 const interactionGroup = new THREE.Group();
@@ -321,16 +353,21 @@ function updateHover(ev) {
 	if (hits.length) {
 		const hit = hits[0].object;
 		if (hoveredFace !== hit) {
-			// new hover target
 			if (hoveredFace) clearHover();
 			hoveredFace = hit;
 			hovering = true;
 			appEl.classList.add('has-hover');
 			const mat = faceMaterials[hit.userData.materialIndex];
-			gsap.to(mat, { emissiveIntensity: 0.35, duration: 0.25, ease: 'sine.out' });
-			gsap.to(mat.emissive, { r: 0.25, g: 0.2, b: 0.35, duration: 0.25, ease: 'sine.out' });
-			gsap.to(cube.scale, { x: 1.03, y: 1.03, z: 1.03, duration: 0.2, overwrite: true });
+			gsap.to(mat, { emissiveIntensity: 0.45, duration: 0.25, ease: 'sine.out' });
+			gsap.to(mat.emissive, { r: 0.35, g: 0.28, b: 0.5, duration: 0.25, ease: 'sine.out' });
+			gsap.to(cube.scale, { x: 1.04, y: 1.04, z: 1.04, duration: 0.2, overwrite: true });
+			// position glow sprite over the face
+			const pos = hit.getWorldPosition(new THREE.Vector3());
+			glowSprite.position.copy(pos);
+			gsap.to(glowMat, { opacity: 0.6, duration: 0.2, overwrite: true });
 		}
+		// follow pointer depth a bit
+		glowSprite.lookAt(camera.position);
 	} else {
 		clearHover();
 	}
@@ -343,6 +380,7 @@ function clearHover() {
 		gsap.to(mat.emissive, { r: 0.0, g: 0.0, b: 0.0, duration: 0.3 });
 		gsap.to(cube.scale, { x: 1.0, y: 1.0, z: 1.0, duration: 0.2 });
 	}
+	gsap.to(glowMat, { opacity: 0.0, duration: 0.25 });
 	hoveredFace = null;
 	hovering = false;
 	appEl.classList.remove('has-hover');
@@ -373,7 +411,12 @@ function triggerTransition(name, matIndex, page, worldPos, worldDir) {
 	renderer.domElement.removeEventListener('click', onClick);
 	window.removeEventListener('keydown', keyboardHandler);
 
-	// Particle burst themed per face
+	// camera dolly in slightly toward the selected face
+	const camStart = camera.position.clone();
+	const camTarget = new THREE.Vector3().copy(worldPos).multiplyScalar(0.35).add(new THREE.Vector3(0, 0.1, 0)).add(new THREE.Vector3(0, 0, 4));
+	gsap.to(camera.position, { x: camTarget.x, y: camTarget.y, z: camTarget.z, duration: 0.7, ease: 'expo.inOut' });
+
+	// Particle + sound
 	const themes = {
 		top: 'leaf',
 		bottom: 'ember',
@@ -432,7 +475,7 @@ function animate(now) {
 	const dt = now - (animate.last || now);
 	animate.last = now;
 
-	if (!prefersReduced) {
+	if (motionEnabled && !prefersReduced) {
 		t += dt * 0.0012;
 		if (!hovering) {
 			cube.rotation.y = t;
@@ -453,7 +496,7 @@ function animate(now) {
 		}
 	}
 
-	renderer.render(scene, camera);
+	composer.render();
 }
 requestAnimationFrame(animate);
 
@@ -465,6 +508,8 @@ function onResize() {
 	renderer.setSize(w, h, false);
 	camera.aspect = w / h;
 	camera.updateProjectionMatrix();
+	composer.setSize(w, h);
+	fxaaPass.material.uniforms['resolution'].value.set(1 / w, 1 / h);
 }
 onResize();
 
@@ -486,3 +531,32 @@ function keyboardHandler(e) {
 
 // Accessibility: keyboard navigate faces
 window.addEventListener('keydown', keyboardHandler);
+
+// Adaptive quality toggles
+const btnMute = document.getElementById('btn-mute');
+const btnMotion = document.getElementById('btn-motion');
+const btnQuality = document.getElementById('btn-quality');
+let audioEnabled = true;
+let motionEnabled = true;
+let highQuality = true;
+
+if (btnMute) btnMute.addEventListener('click', () => {
+	audioEnabled = !audioEnabled;
+	btnMute.setAttribute('aria-pressed', String(audioEnabled));
+	btnMute.textContent = audioEnabled ? '🔈' : '🔇';
+	if (!audioEnabled) { try { audioCtx && audioCtx.suspend(); } catch (e) {} } else { try { audioCtx && audioCtx.resume(); } catch (e) {} }
+});
+
+if (btnMotion) btnMotion.addEventListener('click', () => {
+	motionEnabled = !motionEnabled;
+	btnMotion.setAttribute('aria-pressed', String(motionEnabled));
+});
+
+if (btnQuality) btnQuality.addEventListener('click', () => {
+	highQuality = !highQuality;
+	btnQuality.setAttribute('aria-pressed', String(highQuality));
+	renderer.setPixelRatio(highQuality ? Math.min(2, window.devicePixelRatio || 1) : 1);
+	bloomPass.strength = highQuality ? 0.45 : 0.25;
+	fxaaPass.enabled = highQuality ? true : false;
+	composer.setSize(window.innerWidth, window.innerHeight);
+});
