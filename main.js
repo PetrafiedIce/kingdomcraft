@@ -1,4 +1,4 @@
-// Minimal spinnable Minecraft-style cube (orthographic, 16px at default zoom)
+// Minimal spinnable Minecraft-style cube (perspective 90° FOV, 16x16 texels per face)
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 const canvas = document.getElementById('scene');
@@ -14,18 +14,10 @@ renderer.setClearColor(0x000000, 1);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
-// Orthographic camera sized in CSS pixels so 1 world unit = 1 px at zoom=1
-const camera = new THREE.OrthographicCamera(
-	-window.innerWidth / 2,
-	window.innerWidth / 2,
-	window.innerHeight / 2,
-	-window.innerHeight / 2,
-	0.1,
-	1000
-);
-camera.position.set(0, 0, 10);
-camera.zoom = 1;
-camera.updateProjectionMatrix();
+// Perspective camera (feels non-orthographic)
+const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 3.6);
+camera.lookAt(0, 0, 0);
 
 // Lights
 const ambient = new THREE.AmbientLight(0xffffff, 0.9);
@@ -34,48 +26,58 @@ const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
 keyLight.position.set(3, 5, 2);
 scene.add(keyLight);
 
-// Procedural Minecraft-like textures
-function makeCanvasTexture(drawFn, size = 256) {
+// Generate true 16x16 texel textures (pixel-art) for each face
+function makeCanvasTexture(drawFn, size = 16) {
 	const c = document.createElement('canvas');
 	c.width = c.height = size;
-	const ctx = c.getContext('2d');
+	const ctx = c.getContext('2d', { willReadFrequently: true });
 	drawFn(ctx, size);
 	const tex = new THREE.CanvasTexture(c);
 	tex.colorSpace = THREE.SRGBColorSpace;
-	tex.anisotropy = renderer.capabilities.getMaxAnisotropy?.() || 1;
+	tex.wrapS = THREE.ClampToEdgeWrapping;
+	tex.wrapT = THREE.ClampToEdgeWrapping;
 	tex.magFilter = THREE.NearestFilter;
-	tex.minFilter = THREE.LinearMipMapLinearFilter;
-	tex.generateMipmaps = true;
+	tex.minFilter = THREE.NearestFilter;
+	tex.generateMipmaps = false;
+	tex.needsUpdate = true;
 	return tex;
 }
 
 function drawGrassTop(ctx, S) {
+	// Base green
 	ctx.fillStyle = '#4caf50';
 	ctx.fillRect(0, 0, S, S);
-	for (let y = 0; y < S; y += 8) {
-		for (let x = 0; x < S; x += 8) {
-			const g = 70 + Math.floor(Math.random() * 70);
-			ctx.fillStyle = `rgb(${Math.floor(40 + Math.random()*30)}, ${g}, ${Math.floor(40 + Math.random()*30)})`;
-			ctx.fillRect(x, y, 8, 8);
+	// Subtle 16x16 dithering within the 16 texels
+	for (let y = 0; y < S; y++) {
+		for (let x = 0; x < S; x++) {
+			const g = 90 + Math.floor(Math.random() * 70);
+			const r = 30 + Math.floor(Math.random() * 30);
+			const b = 30 + Math.floor(Math.random() * 30);
+			if ((x + y) % 3 === 0) {
+				ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+				ctx.fillRect(x, y, 1, 1);
+			}
 		}
 	}
-	ctx.globalAlpha = 0.08;
-	ctx.fillStyle = '#c8facc';
-	for (let i = 0; i < 10; i++) {
-		ctx.fillRect(Math.random()*S, Math.random()*S, 6 + Math.random()*24, 4);
-	}
-	ctx.globalAlpha = 1.0;
 }
 
 function drawDirtSide(ctx, S) {
+	// Dirt
 	ctx.fillStyle = '#8d5a3a';
 	ctx.fillRect(0, 0, S, S);
+	// Grass lip (3px tall)
 	ctx.fillStyle = '#3c8b3f';
-	ctx.fillRect(0, 0, S, Math.floor(S * 0.18));
-	for (let y = 0; y < S; y += 6) {
-		for (let x = 0; x < S; x += 6) {
-			ctx.fillStyle = `rgb(${90 + Math.random()*70}, ${50 + Math.random()*40}, ${30 + Math.random()*20})`;
-			ctx.fillRect(x, y, 6, 6);
+	ctx.fillRect(0, 0, S, 3);
+	// Speckled dirt pixels
+	for (let y = 3; y < S; y++) {
+		for (let x = 0; x < S; x++) {
+			if (Math.random() < 0.3) {
+				const rr = 90 + Math.floor(Math.random() * 60);
+				const gg = 50 + Math.floor(Math.random() * 30);
+				const bb = 30 + Math.floor(Math.random() * 20);
+				ctx.fillStyle = `rgb(${rr}, ${gg}, ${bb})`;
+				ctx.fillRect(x, y, 1, 1);
+			}
 		}
 	}
 }
@@ -83,17 +85,22 @@ function drawDirtSide(ctx, S) {
 function drawDirtBottom(ctx, S) {
 	ctx.fillStyle = '#7a4a2a';
 	ctx.fillRect(0, 0, S, S);
-	for (let y = 0; y < S; y += 8) {
-		for (let x = 0; x < S; x += 8) {
-			ctx.fillStyle = `rgb(${90 + Math.random()*40}, ${45 + Math.random()*20}, ${25 + Math.random()*20})`;
-			ctx.fillRect(x, y, 8, 8);
+	for (let y = 0; y < S; y++) {
+		for (let x = 0; x < S; x++) {
+			if (Math.random() < 0.25) {
+				const rr = 90 + Math.floor(Math.random() * 40);
+				const gg = 45 + Math.floor(Math.random() * 20);
+				const bb = 25 + Math.floor(Math.random() * 20);
+				ctx.fillStyle = `rgb(${rr}, ${gg}, ${bb})`;
+				ctx.fillRect(x, y, 1, 1);
+			}
 		}
 	}
 }
 
-const texTop = makeCanvasTexture(drawGrassTop, 256);
-const texSide = makeCanvasTexture(drawDirtSide, 256);
-const texBottom = makeCanvasTexture(drawDirtBottom, 256);
+const texTop = makeCanvasTexture(drawGrassTop, 16);
+const texSide = makeCanvasTexture(drawDirtSide, 16);
+const texBottom = makeCanvasTexture(drawDirtBottom, 16);
 
 const faceMaterials = [
 	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.85, metalness: 0.0 }), // +X
@@ -104,8 +111,8 @@ const faceMaterials = [
 	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.85, metalness: 0.0 })  // -Z
 ];
 
-// 16x16 px cube at default zoom
-const cube = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 16), faceMaterials);
+// Reasonable world size; textures remain 16x16 texels per face
+const cube = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), faceMaterials);
 cube.position.set(0, 0, 0);
 scene.add(cube);
 
@@ -138,16 +145,16 @@ window.addEventListener('pointermove', (e) => {
 	cube.rotation.y += velY;
 });
 
-// Wheel zoom
-function setZoom(z) {
-	camera.zoom = Math.max(0.2, Math.min(40, z));
-	camera.updateProjectionMatrix();
+// Wheel dolly zoom (move camera along Z)
+function setCameraZ(z) {
+	camera.position.z = Math.max(1.2, Math.min(12, z));
 }
 
 window.addEventListener('wheel', (e) => {
 	e.preventDefault();
 	const factor = Math.exp(-e.deltaY * 0.001);
-	setZoom(camera.zoom * factor);
+	setCameraZ(camera.position.z * factor);
+	camera.lookAt(0, 0, 0);
 }, { passive: false });
 
 function animate() {
@@ -156,16 +163,14 @@ function animate() {
 		cube.rotation.y += (velY *= 0.95);
 		cube.rotation.x += (velX *= 0.95);
 	}
+	camera.lookAt(0, 0, 0);
 	renderer.render(scene, camera);
 }
 animate();
 
-// Resize handling keeps 1 world unit = 1 CSS pixel at zoom=1
+// Resize handling
 window.addEventListener('resize', () => {
 	renderer.setSize(window.innerWidth, window.innerHeight);
-	camera.left = -window.innerWidth / 2;
-	camera.right = window.innerWidth / 2;
-	camera.top = window.innerHeight / 2;
-	camera.bottom = -window.innerHeight / 2;
+	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
 });
