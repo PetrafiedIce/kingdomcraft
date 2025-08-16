@@ -125,10 +125,11 @@ camera.position.set(0.6, 0.5, 3.6);
 // Ensure camera aims at cube origin
 const lookTarget = new THREE.Vector3(0, 0, 0);
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.3;
+renderer.setClearColor(0x000000, 1);
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
@@ -152,17 +153,20 @@ function setupComposer() {
 setupComposer();
 
 // Lights
-const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+const ambient = new THREE.AmbientLight(0xffffff, 0.9);
 scene.add(ambient);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
 keyLight.position.set(3, 5, 2);
 keyLight.castShadow = false;
 scene.add(keyLight);
 
-const rimLight = new THREE.DirectionalLight(0x8a5cff, 0.6);
+const rimLight = new THREE.DirectionalLight(0x8a8cff, 0.4);
 rimLight.position.set(-4, 2, -3);
 scene.add(rimLight);
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x2a2a2a, 0.5);
+scene.add(hemi);
 
 // Textures (procedural) for Minecraft-like look
 function makeCanvasTexture(drawFn, size = 256) {
@@ -247,7 +251,7 @@ scene.add(cube);
 // Edge lines for crispness
 const edges = new THREE.LineSegments(
 	new THREE.EdgesGeometry(cubeGeom),
-	new THREE.LineBasicMaterial({ color: 0x111111, linewidth: 1 })
+	new THREE.LineBasicMaterial({ color: 0xd4af37, linewidth: 1 })
 );
 scene.add(edges);
 
@@ -259,8 +263,9 @@ rimLight.intensity = 0.35;
 
 // Material color normalization
 faceMaterials.forEach((m) => {
-	m.roughness = Math.min(0.95, Math.max(0.6, m.roughness));
+	m.roughness = Math.min(0.9, Math.max(0.6, m.roughness));
 	m.metalness = 0.0;
+	m.emissiveIntensity = Math.max(m.emissiveIntensity || 0, 0.05);
 });
 
 // Hover glow sprite
