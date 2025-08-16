@@ -1,4 +1,4 @@
-// Minimal spinnable Minecraft-style cube
+// Minimal spinnable Minecraft-style cube (orthographic, 16px at default zoom)
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 const canvas = document.getElementById('scene');
@@ -10,17 +10,27 @@ renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 1);
 
-// Scene & Camera
+// Scene
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0.6, 0.5, 3.6);
+// Orthographic camera sized in CSS pixels so 1 world unit = 1 px at zoom=1
+const camera = new THREE.OrthographicCamera(
+	-window.innerWidth / 2,
+	window.innerWidth / 2,
+	window.innerHeight / 2,
+	-window.innerHeight / 2,
+	0.1,
+	1000
+);
+camera.position.set(0, 0, 10);
+camera.zoom = 1;
+camera.updateProjectionMatrix();
 
 // Lights
-const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+const ambient = new THREE.AmbientLight(0xffffff, 0.9);
 scene.add(ambient);
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
 keyLight.position.set(3, 5, 2);
 scene.add(keyLight);
 
@@ -94,10 +104,12 @@ const faceMaterials = [
 	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.85, metalness: 0.0 })  // -Z
 ];
 
-const cube = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), faceMaterials);
+// 16x16 px cube at default zoom
+const cube = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 16), faceMaterials);
+cube.position.set(0, 0, 0);
 scene.add(cube);
 
-// Simple pointer-driven rotation with inertia
+// Drag rotation with inertia
 let isDragging = false;
 let lastX = 0, lastY = 0;
 let velX = 0, velY = 0;
@@ -106,7 +118,7 @@ canvas.addEventListener('pointerdown', (e) => {
 	isDragging = true;
 	lastX = e.clientX;
 	lastY = e.clientY;
-	canvas.setPointerCapture(e.pointerId);
+	try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 });
 
 window.addEventListener('pointerup', (e) => {
@@ -126,6 +138,18 @@ window.addEventListener('pointermove', (e) => {
 	cube.rotation.y += velY;
 });
 
+// Wheel zoom
+function setZoom(z) {
+	camera.zoom = Math.max(0.2, Math.min(40, z));
+	camera.updateProjectionMatrix();
+}
+
+window.addEventListener('wheel', (e) => {
+	e.preventDefault();
+	const factor = Math.exp(-e.deltaY * 0.001);
+	setZoom(camera.zoom * factor);
+}, { passive: false });
+
 function animate() {
 	requestAnimationFrame(animate);
 	if (!isDragging) {
@@ -136,8 +160,12 @@ function animate() {
 }
 animate();
 
+// Resize handling keeps 1 world unit = 1 CSS pixel at zoom=1
 window.addEventListener('resize', () => {
 	renderer.setSize(window.innerWidth, window.innerHeight);
-	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.left = -window.innerWidth / 2;
+	camera.right = window.innerWidth / 2;
+	camera.top = window.innerHeight / 2;
+	camera.bottom = -window.innerHeight / 2;
 	camera.updateProjectionMatrix();
 });
