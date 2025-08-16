@@ -117,10 +117,10 @@ function playSfx(type = 'chime') {
 
 // Scene
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0e0a1f);
+scene.background = new THREE.Color(0x000000);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-camera.position.set(0, 0.4, 4.2);
+camera.position.set(0.6, 0.5, 3.6);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -232,16 +232,29 @@ const faceMaterials = [
 	new THREE.MeshStandardMaterial({ map: texSide, roughness: 0.9, metalness: 0.0, emissive: 0x000000, emissiveIntensity: 0.0 }), // -Z back
 ];
 
-const cubeGeom = new THREE.BoxGeometry(2, 2, 2);
+// Smaller cube
+const cubeGeom = new THREE.BoxGeometry(1.4, 1.4, 1.4);
 const cube = new THREE.Mesh(cubeGeom, faceMaterials);
 scene.add(cube);
 
 // Edge lines for crispness
 const edges = new THREE.LineSegments(
 	new THREE.EdgesGeometry(cubeGeom),
-	new THREE.LineBasicMaterial({ color: 0x1a142f, linewidth: 1 })
+	new THREE.LineBasicMaterial({ color: 0x111111, linewidth: 1 })
 );
 scene.add(edges);
+
+// Neutral lighting and subtle rim
+ambient.intensity = 0.6;
+keyLight.intensity = 0.9;
+rimLight.color.set(0x333366);
+rimLight.intensity = 0.35;
+
+// Material color normalization
+faceMaterials.forEach((m) => {
+	m.roughness = Math.min(0.95, Math.max(0.6, m.roughness));
+	m.metalness = 0.0;
+});
 
 // Hover glow sprite
 const glowTex = new THREE.TextureLoader().load('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="white" stop-opacity="1"/><stop offset="100%" stop-color="white" stop-opacity="0"/></radialGradient></defs><circle cx="32" cy="32" r="28" fill="url(%23g)"/></svg>');
@@ -339,13 +352,42 @@ function getOutwardNormal(object3d) {
 	return new THREE.Vector3(0, 0, 1).applyQuaternion(q).normalize();
 }
 
+// Pointer orbit controls (no library), smooth damping
+const orbit = {
+	targetTheta: 0.0,
+	targetPhi: 0.25,
+	theta: 0.0,
+	phi: 0.25,
+	dragging: false,
+	lastX: 0,
+	lastY: 0
+};
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function onPointerDown(e) {
+	orbit.dragging = true;
+	orbit.lastX = e.clientX;
+	orbit.lastY = e.clientY;
+}
+function onPointerUp() { orbit.dragging = false; }
+function onPointerMove(e) {
+	if (!orbit.dragging || isTransitioning) return updateHover(e);
+	const dx = e.clientX - orbit.lastX;
+	const dy = e.clientY - orbit.lastY;
+	orbit.lastX = e.clientX;
+	orbit.lastY = e.clientY;
+	const ROT_SPEED = 0.005;
+	orbit.targetTheta += dx * ROT_SPEED;
+	orbit.targetPhi = clamp(orbit.targetPhi + dy * ROT_SPEED, -0.6, 0.8);
+}
+
 function updateHover(ev) {
 	if (isTransitioning) return;
 	setPointerFromEvent(ev);
-	// subtle parallax tilt
-	const tiltX = -pointer.y * 0.1;
-	const tiltY = pointer.x * 0.1;
-	gsap.to(cube.rotation, { x: Math.sin(t * 0.7) * 0.25 + tiltX, y: t + tiltY, duration: 0.2, overwrite: 'auto' });
+	const tiltX = -pointer.y * 0.02; // reduced tilt
+	const tiltY = pointer.x * 0.02;
+	gsap.to(cube.rotation, { x: Math.sin(t * 0.6) * 0.15 + tiltX + orbit.phi * 0.6, y: t * 0.6 + tiltY + orbit.theta, duration: 0.2, overwrite: 'auto' });
 	gsap.to(edges.rotation, { x: cube.rotation.x, y: cube.rotation.y, z: cube.rotation.z, duration: 0.2, overwrite: 'auto' });
 
 	raycaster.setFromCamera(pointer, camera);
@@ -476,10 +518,13 @@ function animate(now) {
 	animate.last = now;
 
 	if (motionEnabled && !prefersReduced) {
-		t += dt * 0.0012;
-		if (!hovering) {
-			cube.rotation.y = t;
-			cube.rotation.x = Math.sin(t * 0.7) * 0.25;
+		t += dt * 0.0011;
+		// smooth-damp orbit
+		orbit.theta += (orbit.targetTheta - orbit.theta) * 0.08;
+		orbit.phi += (orbit.targetPhi - orbit.phi) * 0.08;
+		if (!hovering && !orbit.dragging) {
+			cube.rotation.y = t * 0.6 + orbit.theta;
+			cube.rotation.x = Math.sin(t * 0.6) * 0.15 + orbit.phi * 0.6;
 		}
 		edges.rotation.copy(cube.rotation);
 		edges.position.copy(cube.position);
@@ -513,8 +558,9 @@ function onResize() {
 }
 onResize();
 
-renderer.domElement.addEventListener('pointermove', updateHover);
-renderer.domElement.addEventListener('pointerleave', clearHover);
+renderer.domElement.addEventListener('pointerdown', onPointerDown);
+window.addEventListener('pointerup', onPointerUp);
+renderer.domElement.addEventListener('pointermove', onPointerMove, { passive: true });
 renderer.domElement.addEventListener('click', onClick);
 
 function keyboardHandler(e) {
