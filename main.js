@@ -3,11 +3,11 @@
 
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { gsap } from 'https://unpkg.com/gsap@3.12.5/index.js?module';
-import { EffectComposer } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/ShaderPass.js';
-import { FXAAShader } from 'https://unpkg.com/three@0.160.0/examples/jsm/shaders/FXAAShader.js';
+import { EffectComposer } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js?module';
+import { RenderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/RenderPass.js?module';
+import { UnrealBloomPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js?module';
+import { ShaderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/ShaderPass.js?module';
+import { FXAAShader } from 'https://unpkg.com/three@0.160.0/examples/jsm/shaders/FXAAShader.js?module';
 
 const appEl = document.getElementById('app');
 const canvas = document.getElementById('scene');
@@ -122,6 +122,9 @@ scene.background = new THREE.Color(0x000000);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
 camera.position.set(0.6, 0.5, 3.6);
 
+// Ensure camera aims at cube origin
+const lookTarget = new THREE.Vector3(0, 0, 0);
+
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -132,16 +135,19 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 // Postprocessing
 let composer, renderPass, bloomPass, fxaaPass;
 function setupComposer() {
-	composer = new EffectComposer(renderer);
-	renderPass = new RenderPass(scene, camera);
-	composer.addPass(renderPass);
-
-	bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.9, 0.3);
-	composer.addPass(bloomPass);
-
-	fxaaPass = new ShaderPass(FXAAShader);
-	fxaaPass.material.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
-	composer.addPass(fxaaPass);
+	try {
+		composer = new EffectComposer(renderer);
+		renderPass = new RenderPass(scene, camera);
+		composer.addPass(renderPass);
+		bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.9, 0.3);
+		composer.addPass(bloomPass);
+		fxaaPass = new ShaderPass(FXAAShader);
+		fxaaPass.material.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
+		composer.addPass(fxaaPass);
+	} catch (e) {
+		console.warn('Postprocessing disabled:', e);
+		composer = null;
+	}
 }
 setupComposer();
 
@@ -530,6 +536,8 @@ function animate(now) {
 		edges.position.copy(cube.position);
 	}
 
+	camera.lookAt(lookTarget);
+
 	// cleanup particles
 	for (let i = particlesParent.children.length - 1; i >= 0; i--) {
 		const p = particlesParent.children[i];
@@ -541,7 +549,7 @@ function animate(now) {
 		}
 	}
 
-	composer.render();
+	if (composer) composer.render(); else renderer.render(scene, camera);
 }
 requestAnimationFrame(animate);
 
@@ -553,7 +561,7 @@ function onResize() {
 	renderer.setSize(w, h, false);
 	camera.aspect = w / h;
 	camera.updateProjectionMatrix();
-	composer.setSize(w, h);
+	if (composer) composer.setSize(w, h);
 	fxaaPass.material.uniforms['resolution'].value.set(1 / w, 1 / h);
 }
 onResize();
