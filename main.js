@@ -165,6 +165,7 @@ function makeCanvasTexture(drawFn, size = 256) {
 	const ctx = c.getContext('2d');
 	drawFn(ctx, size);
 	const tex = new THREE.CanvasTexture(c);
+	tex.colorSpace = THREE.SRGBColorSpace;
 	tex.anisotropy = renderer.capabilities.getMaxAnisotropy?.() || 1;
 	tex.magFilter = THREE.NearestFilter;
 	tex.minFilter = THREE.LinearMipMapLinearFilter;
@@ -268,17 +269,17 @@ const interactionGroup = new THREE.Group();
 scene.add(interactionGroup);
 
 const faceDefs = [
-	{ name: 'right',  normal: new THREE.Vector3( 1, 0, 0), rot: [0, Math.PI/2, 0], pos: [ 1.01, 0, 0], materialIndex: 0, page: 'east.html'  },
-	{ name: 'left',   normal: new THREE.Vector3(-1, 0, 0), rot: [0, -Math.PI/2, 0], pos: [-1.01, 0, 0], materialIndex: 1, page: 'west.html'  },
-	{ name: 'top',    normal: new THREE.Vector3( 0, 1, 0), rot: [-Math.PI/2, 0, 0], pos: [0,  1.01, 0], materialIndex: 2, page: 'top.html'   },
-	{ name: 'bottom', normal: new THREE.Vector3( 0,-1, 0), rot: [ Math.PI/2, 0, 0], pos: [0, -1.01, 0], materialIndex: 3, page: 'bottom.html'},
-	{ name: 'front',  normal: new THREE.Vector3( 0, 0, 1), rot: [0, 0, 0],           pos: [0, 0,  1.01], materialIndex: 4, page: 'south.html' },
-	{ name: 'back',   normal: new THREE.Vector3( 0, 0,-1), rot: [0, Math.PI, 0],     pos: [0, 0, -1.01], materialIndex: 5, page: 'north.html' },
+	{ name: 'right',  normal: new THREE.Vector3( 1, 0, 0), rot: [0, Math.PI/2, 0], pos: [ 0.71, 0, 0], materialIndex: 0, page: 'east.html'  },
+	{ name: 'left',   normal: new THREE.Vector3(-1, 0, 0), rot: [0, -Math.PI/2, 0], pos: [-0.71, 0, 0], materialIndex: 1, page: 'west.html'  },
+	{ name: 'top',    normal: new THREE.Vector3( 0, 1, 0), rot: [-Math.PI/2, 0, 0], pos: [0,  0.71, 0], materialIndex: 2, page: 'top.html'   },
+	{ name: 'bottom', normal: new THREE.Vector3( 0,-1, 0), rot: [ Math.PI/2, 0, 0], pos: [0, -0.71, 0], materialIndex: 3, page: 'bottom.html'},
+	{ name: 'front',  normal: new THREE.Vector3( 0, 0, 1), rot: [0, 0, 0],           pos: [0, 0,  0.71], materialIndex: 4, page: 'south.html' },
+	{ name: 'back',   normal: new THREE.Vector3( 0, 0,-1), rot: [0, Math.PI, 0],     pos: [0, 0, -0.71], materialIndex: 5, page: 'north.html' },
 ];
 
 for (const f of faceDefs) {
 	const plane = new THREE.Mesh(
-		new THREE.PlaneGeometry(2.02, 2.02),
+		new THREE.PlaneGeometry(1.42, 1.42),
 		new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0, depthTest: false })
 	);
 	plane.position.set(...f.pos);
@@ -403,12 +404,11 @@ function updateHover(ev) {
 			gsap.to(mat, { emissiveIntensity: 0.45, duration: 0.25, ease: 'sine.out' });
 			gsap.to(mat.emissive, { r: 0.35, g: 0.28, b: 0.5, duration: 0.25, ease: 'sine.out' });
 			gsap.to(cube.scale, { x: 1.04, y: 1.04, z: 1.04, duration: 0.2, overwrite: true });
-			// position glow sprite over the face
 			const pos = hit.getWorldPosition(new THREE.Vector3());
 			glowSprite.position.copy(pos);
+			glowSprite.scale.set(1.2, 1.2, 1.2);
 			gsap.to(glowMat, { opacity: 0.6, duration: 0.2, overwrite: true });
 		}
-		// follow pointer depth a bit
 		glowSprite.lookAt(camera.position);
 	} else {
 		clearHover();
