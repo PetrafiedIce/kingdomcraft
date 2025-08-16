@@ -117,6 +117,7 @@ body {
   background: var(--btn-bg);
   border: 1px solid rgba(212,175,55,0.25);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 6px 20px rgba(0,0,0,0.35);
+  cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 .btn:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(212,175,55,0.12), var(--shadow-md); }
@@ -160,7 +161,8 @@ body {
   z-index: 1;
 }
 #particles-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.55; pointer-events: none; }
-.hero-inner { position: relative; z-index: 5; text-align: center; max-width: 1000px; }
+.hero-inner { position: relative; z-index: 5; text-align: center; max-width: 1000px; pointer-events: none; }
+.logo-lockup, .cta-group, .ip-card { pointer-events: auto; }
 .logo-lockup { display: inline-flex; align-items: center; gap: 14px; }
 .icon-crown-lg { width: 42px; height: 42px; color: var(--gold-500); filter: drop-shadow(0 6px 20px rgba(212,175,55,0.35)); }
 .site-title { font-family: var(--font-display); font-size: 56px; line-height: 1.05; margin: 0; letter-spacing: 0.5px; text-shadow: 0 12px 40px rgba(0,0,0,0.45); }

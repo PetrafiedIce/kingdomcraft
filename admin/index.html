@@ -19,7 +19,7 @@
     .pin-display { width: 220px; height: 48px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.04); display: grid; place-items:center; font-weight: 700; letter-spacing: 6px; font-size: 22px; }
     .pin-error { color: var(--danger); min-height: 18px; font-size: 14px; }
     .keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
-    .keypad .btn { width: 72px; height: 56px; font-weight: 700; }
+    .keypad .btn { width: 72px; height: 56px; font-weight: 700; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
 
     .settings-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
     .settings-grid .full { grid-column: 1 / -1; }
@@ -41,7 +41,7 @@
           <h1 class="admin-title">Admin Panel</h1>
           <p class="admin-sub">Secure settings for KingdomCraft</p>
         </div>
-        <a href="/" class="btn btn-ghost">Back to site</a>
+        <a href="/" class="btn btn-ghost" type="button">Back to site</a>
       </div>
 
       <div id="lock" class="lock-screen" aria-live="polite">
@@ -49,18 +49,18 @@
         <div id="pinDisplay" class="pin-display" aria-label="PIN input" aria-live="polite">____</div>
         <div class="pin-error" id="pinError"></div>
         <div class="keypad" role="group" aria-label="Keypad">
-          <button class="btn" data-key="1">1</button>
-          <button class="btn" data-key="2">2</button>
-          <button class="btn" data-key="3">3</button>
-          <button class="btn" data-key="4">4</button>
-          <button class="btn" data-key="5">5</button>
-          <button class="btn" data-key="6">6</button>
-          <button class="btn" data-key="7">7</button>
-          <button class="btn" data-key="8">8</button>
-          <button class="btn" data-key="9">9</button>
-          <button class="btn btn-secondary" data-action="clear">Clear</button>
-          <button class="btn" data-key="0">0</button>
-          <button class="btn btn-primary" data-action="enter">Enter</button>
+          <button class="btn" type="button" data-key="1">1</button>
+          <button class="btn" type="button" data-key="2">2</button>
+          <button class="btn" type="button" data-key="3">3</button>
+          <button class="btn" type="button" data-key="4">4</button>
+          <button class="btn" type="button" data-key="5">5</button>
+          <button class="btn" type="button" data-key="6">6</button>
+          <button class="btn" type="button" data-key="7">7</button>
+          <button class="btn" type="button" data-key="8">8</button>
+          <button class="btn" type="button" data-key="9">9</button>
+          <button class="btn btn-secondary" type="button" data-action="clear">Clear</button>
+          <button class="btn" type="button" data-key="0">0</button>
+          <button class="btn btn-primary" type="button" data-action="enter">Enter</button>
         </div>
       </div>
 
@@ -89,8 +89,8 @@
         </div>
 
         <div class="row" style="margin-top:16px;">
-          <button id="saveBtn" class="btn btn-primary">Save</button>
-          <button id="resetBtn" class="btn btn-secondary">Reset to defaults</button>
+          <button id="saveBtn" class="btn btn-primary" type="button">Save</button>
+          <button id="resetBtn" class="btn btn-secondary" type="button">Reset to defaults</button>
           <span id="status" class="hint" role="status" aria-live="polite"></span>
         </div>
       </div>
