@@ -1,31 +1,14 @@
-/* KingdomCraft styles */
-:root {
-	--bg: #0e0a1f;
-	--fg: #e9e4ff;
-	--accent: #d4af37; /* royal gold */
-	--accent-2: #7bd389; /* leaf green */
-	--accent-3: #8a5cff; /* arcane purple */
-	--shadow: rgba(0, 0, 0, 0.45);
+/* Minimal styles for full-screen WebGL canvas */
+html, body {
+	height: 100%;
 }
-
-* { box-sizing: border-box; }
-html, body { height: 100%; }
 body {
 	margin: 0;
-	font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 	background: #000;
-	color: var(--fg);
-	overscroll-behavior: none;
+	color: #fff;
 }
-
-#app {
-	position: fixed;
-	inset: 0;
-	overflow: hidden;
-}
-
 #scene {
-	position: absolute;
+	position: fixed;
 	inset: 0;
 	width: 100%;
 	height: 100%;
@@ -35,98 +18,4 @@ body {
 	-moz-user-select: none;
 	user-select: none;
 	touch-action: none;
-}
-
-#hud {
-	position: absolute;
-	left: 50%;
-	top: 6vh;
-	transform: translateX(-50%);
-	text-align: center;
-	pointer-events: none;
-	filter: drop-shadow(0 6px 12px var(--shadow));
-}
-#hud h1 {
-	margin: 0 0 6px 0;
-	font-weight: 800;
-	letter-spacing: 1.2px;
-	font-size: clamp(20px, 3.2vw, 36px);
-	background: linear-gradient(90deg, var(--accent), #fff1b8 45%, var(--accent));
-	-webkit-background-clip: text;
-	background-clip: text;
-	color: transparent;
-}
-#hud .hint {
-	margin: 0;
-	opacity: 0.8;
-	font-size: clamp(12px, 1.8vw, 14px);
-}
-#hud .controls {
-	margin-top: 10px;
-	display: inline-flex;
-	gap: 8px;
-	background: rgba(10, 8, 18, 0.35);
-	backdrop-filter: blur(6px) saturate(1.2);
-	border: 1px solid rgba(255,255,255,0.08);
-	border-radius: 999px;
-	padding: 6px 8px;
-	pointer-events: auto;
-}
-#hud .controls .btn {
-	appearance: none;
-	border: none;
-	padding: 6px 10px;
-	border-radius: 20px;
-	background: rgba(255,255,255,0.06);
-	color: var(--fg);
-	cursor: pointer;
-	transition: transform .15s ease, background .15s ease;
-	font-size: 14px;
-	line-height: 1;
-}
-#hud .controls .btn[aria-pressed="true"] { background: rgba(212,175,55,0.25); }
-#hud .controls .btn:active { transform: scale(0.96); }
-
-/* Transition overlay */
-#transition {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	opacity: 0;
-}
-#transition .veil {
-	position: absolute;
-	inset: 0;
-	background: radial-gradient(120vh 120vh at 50% 50%, rgba(139, 92, 246, 0.0), rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.95) 100%);
-	mix-blend-mode: screen;
-	transform: scale(0.9);
-}
-#transition .crest {
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	transform: translate(-50%, -50%) scale(0.8);
-	font-size: clamp(48px, 12vw, 120px);
-	color: var(--accent);
-	text-shadow: 0 0 24px rgba(212, 175, 55, 0.4), 0 0 56px rgba(212,175,55,0.25);
-	opacity: 0.0;
-}
-#transition .runes {
-	position: absolute;
-	inset: 0;
-	background-image:
-		radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.6), rgba(255,255,255,0)),
-		radial-gradient(2px 2px at 80% 60%, rgba(255,255,255,0.5), rgba(255,255,255,0)),
-		radial-gradient(1.5px 1.5px at 60% 80%, rgba(255,255,255,0.4), rgba(255,255,255,0)),
-		conic-gradient(from 0deg at 50% 50%, rgba(212,175,55,0.02), rgba(139,92,246,0.02), rgba(123,211,137,0.02), rgba(212,175,55,0.02));
-	opacity: 0.0;
-	filter: blur(0.4px) saturate(1.2);
-}
-
-/* Cursor feedback */
-.has-hover { cursor: pointer; }
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-	* { animation: none !important; transition: none !important; }
 }
