@@ -159,14 +159,14 @@ body {
     radial-gradient(900px 500px at 0% 100%, rgba(212,175,55,0.08), transparent 70%);
   z-index: 1;
 }
-#particles-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.55; pointer-events: none; }
-.hero-inner { position: relative; z-index: 1; text-align: center; max-width: 1000px; }
+#particles-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0.55; pointer-events: none; }
+.hero-inner { position: relative; z-index: 5; text-align: center; max-width: 1000px; }
 .logo-lockup { display: inline-flex; align-items: center; gap: 14px; }
 .icon-crown-lg { width: 42px; height: 42px; color: var(--gold-500); filter: drop-shadow(0 6px 20px rgba(212,175,55,0.35)); }
 .site-title { font-family: var(--font-display); font-size: 56px; line-height: 1.05; margin: 0; letter-spacing: 0.5px; text-shadow: 0 12px 40px rgba(0,0,0,0.45); }
 .tagline { font-family: var(--font-accent); font-size: 26px; color: var(--gold-400); margin: 16px 0 4px; letter-spacing: 1px; }
 .subtext { color: var(--muted); margin-bottom: 22px; }
-.cta-group { display: inline-flex; gap: 14px; flex-wrap: wrap; }
+.cta-group { display: inline-flex; gap: 14px; flex-wrap: wrap; position: relative; z-index: 10; }
 
 .ip-card {
   margin: 22px auto 0;
@@ -178,6 +178,7 @@ body {
   background: radial-gradient(350px 150px at 20% 20%, rgba(212,175,55,0.08), rgba(27,42,78,0.15)), rgba(255,255,255,0.04);
   border: 1px solid rgba(212,175,55,0.28);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), var(--shadow-md);
+  position: relative; z-index: 10;
 }
 .ip-card .ip-label { color: var(--muted); font-size: 13px; }
 .ip-card .ip { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; color: var(--gold-300); }

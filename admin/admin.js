@@ -59,19 +59,25 @@
     let buff = '';
     function render() { pinDisplay.textContent = buff.padEnd(4, '_').replace(/\d/g, '•'); }
     function clear(msg) { buff = ''; render(); if (msg) { pinError.textContent = msg; setTimeout(() => pinError.textContent = '', 1400); } }
-    lock.addEventListener('click', (e) => {
-      const key = e.target.getAttribute('data-key');
-      const action = e.target.getAttribute('data-action');
-      if (!key && !action) return;
-      if (key) {
-        if (buff.length < 4) buff += key;
-        render();
-      } else if (action === 'clear') { clear(''); }
-      else if (action === 'enter') {
-        if (buff === PIN) { setUnlocked(true); initForm(); }
-        else { clear('Incorrect PIN'); }
-      }
+
+    // Attach per-button handlers
+    lock.querySelectorAll('.keypad .btn').forEach(btn => {
+      const key = btn.getAttribute('data-key');
+      const action = btn.getAttribute('data-action');
+      btn.addEventListener('click', () => {
+        if (key) {
+          if (buff.length < 4) buff += key;
+          render();
+          return;
+        }
+        if (action === 'clear') { clear(''); return; }
+        if (action === 'enter') {
+          if (buff === PIN) { setUnlocked(true); initForm(); }
+          else { clear('Incorrect PIN'); }
+        }
+      });
     });
+
     render();
   }
 
@@ -86,7 +92,6 @@
   const statusEl = document.getElementById('status');
 
   async function initForm() {
-    // try server, fallback to local cache
     const cfg = await readServerConfig().catch(() => loadLocal());
     ipEl.value = cfg.ip || '';
     discordEl.value = cfg.discord || '';
