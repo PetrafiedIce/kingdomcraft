@@ -49,6 +49,8 @@
   const pinDisplay = document.getElementById('pinDisplay');
   const pinError = document.getElementById('pinError');
   const pinInput = document.getElementById('pinInput');
+  const pinFallback = document.getElementById('pinFallback');
+  const unlockBtn = document.getElementById('unlockBtn');
 
   function setUnlocked(u) {
     if (u) sessionStorage.setItem(SESSION_UNLOCK, '1'); else sessionStorage.removeItem(SESSION_UNLOCK);
@@ -62,7 +64,8 @@
     function clear(msg) { buff = ''; render(); pinInput.value = ''; if (msg) { pinError.textContent = msg; setTimeout(() => pinError.textContent = '', 1400); } }
 
     function finalize() {
-      if (buff === PIN) { setUnlocked(true); initForm(); }
+      const val = buff || pinFallback.value || '';
+      if (val === PIN) { setUnlocked(true); initForm(); }
       else { clear('Incorrect PIN'); }
     }
 
@@ -85,6 +88,9 @@
       btn.addEventListener('click', onPress);
       btn.addEventListener('touchstart', onPress, { passive: false });
     });
+
+    // Fallback unlock
+    unlockBtn.addEventListener('click', (e) => { e.preventDefault(); finalize(); });
 
     // Hidden input focus to capture any system quirks
     pinInput.focus();

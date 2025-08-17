@@ -21,6 +21,8 @@
     .keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
     .keypad .btn { width: 72px; height: 56px; font-weight: 700; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
     .pin-input-hidden { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; left: -9999px; top: -9999px; }
+    .fallback-row { display:flex; gap: 10px; align-items: center; }
+    .fallback-row input { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(212,175,55,0.22); color: var(--text); }
 
     .settings-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
     .settings-grid .full { grid-column: 1 / -1; }
@@ -63,6 +65,10 @@
           <button class="btn btn-secondary" type="button" data-action="clear">Clear</button>
           <button class="btn" type="button" data-key="0">0</button>
           <button class="btn btn-primary" type="button" data-action="enter">Enter</button>
+        </div>
+        <div class="fallback-row">
+          <input id="pinFallback" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="PIN (1111)">
+          <button id="unlockBtn" class="btn btn-primary" type="button">Unlock</button>
         </div>
       </div>
 
