@@ -30,6 +30,7 @@
   const unlockForm = document.getElementById('unlockForm');
   const pinField = document.getElementById('pinField');
   const unlockError = document.getElementById('unlockError');
+  const unlockBtn = document.getElementById('unlockBtn');
 
   function setUnlocked(u) {
     if (u) sessionStorage.setItem(SESSION_UNLOCK, '1'); else sessionStorage.removeItem(SESSION_UNLOCK);
@@ -37,13 +38,16 @@
     panel.style.display = u ? '' : 'none';
   }
 
+  function tryUnlock() {
+    const val = (pinField.value || '').trim();
+    if (val && val === PIN) { setUnlocked(true); initForm(); return; }
+    unlockError.textContent = 'Incorrect PIN';
+    setTimeout(() => { if (unlockError.textContent) unlockError.textContent = ''; }, 1500);
+  }
+
   function initUnlock() {
-    unlockForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const val = (pinField.value || '').trim();
-      if (val === PIN) { setUnlocked(true); initForm(); }
-      else { unlockError.textContent = 'Incorrect PIN'; setTimeout(() => { if (unlockError.textContent) unlockError.textContent = ''; }, 1500); }
-    });
+    unlockForm.addEventListener('submit', (e) => { e.preventDefault(); tryUnlock(); });
+    if (unlockBtn) unlockBtn.addEventListener('click', (e) => { e.preventDefault(); tryUnlock(); });
     pinField.focus();
   }
 
