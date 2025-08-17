@@ -25,32 +25,11 @@
   }
   function saveLocal(cfg) { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
 
-  function toLocalDatetimeValue(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.valueOf())) return '';
-    const pad = n => String(n).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const mm = pad(d.getMonth() + 1);
-    const dd = pad(d.getDate());
-    const hh = pad(d.getHours());
-    const mi = pad(d.getMinutes());
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-  }
-  function fromLocalDatetimeValue(val) {
-    if (!val) return '';
-    const d = new Date(val);
-    if (isNaN(d.valueOf())) return '';
-    return d.toISOString();
-  }
-
   const lock = document.getElementById('lock');
   const panel = document.getElementById('panel');
-  const pinDisplay = document.getElementById('pinDisplay');
-  const pinError = document.getElementById('pinError');
-  const pinInput = document.getElementById('pinInput');
-  const pinFallback = document.getElementById('pinFallback');
-  const unlockBtn = document.getElementById('unlockBtn');
+  const unlockForm = document.getElementById('unlockForm');
+  const pinField = document.getElementById('pinField');
+  const unlockError = document.getElementById('unlockError');
 
   function setUnlocked(u) {
     if (u) sessionStorage.setItem(SESSION_UNLOCK, '1'); else sessionStorage.removeItem(SESSION_UNLOCK);
@@ -58,59 +37,14 @@
     panel.style.display = u ? '' : 'none';
   }
 
-  function initKeypad() {
-    let buff = '';
-    function render() { pinDisplay.textContent = buff.padEnd(4, '_').replace(/\d/g, '•'); }
-    function clear(msg) { buff = ''; render(); pinInput.value = ''; if (msg) { pinError.textContent = msg; setTimeout(() => pinError.textContent = '', 1400); } }
-
-    function finalize() {
-      const val = buff || pinFallback.value || '';
+  function initUnlock() {
+    unlockForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = (pinField.value || '').trim();
       if (val === PIN) { setUnlocked(true); initForm(); }
-      else { clear('Incorrect PIN'); }
-    }
-
-    function pushDigit(d) {
-      if (buff.length >= 4) return;
-      buff += d; pinInput.value = buff; render();
-      if (buff.length === 4) finalize();
-    }
-
-    lock.querySelectorAll('.keypad .btn').forEach(btn => {
-      const onPress = (e) => {
-        e.preventDefault(); e.stopPropagation();
-        const key = btn.getAttribute('data-key');
-        const action = btn.getAttribute('data-action');
-        if (key) { pushDigit(key); return; }
-        if (action === 'clear') { clear(''); return; }
-        if (action === 'enter') { finalize(); return; }
-      };
-      btn.addEventListener('pointerdown', onPress);
-      btn.addEventListener('click', onPress);
-      btn.addEventListener('touchstart', onPress, { passive: false });
+      else { unlockError.textContent = 'Incorrect PIN'; setTimeout(() => { if (unlockError.textContent) unlockError.textContent = ''; }, 1500); }
     });
-
-    // Fallback unlock
-    unlockBtn.addEventListener('click', (e) => { e.preventDefault(); finalize(); });
-
-    // Hidden input focus to capture any system quirks
-    pinInput.focus();
-    pinInput.addEventListener('input', () => {
-      const digits = (pinInput.value || '').replace(/\D/g, '').slice(0,4);
-      if (digits !== buff) { buff = digits; render(); }
-      if (buff.length === 4) finalize();
-    });
-
-    // Keyboard support
-    document.addEventListener('keydown', (e) => {
-      if (panel.style.display !== 'none') return;
-      const k = e.key;
-      if (/^\d$/.test(k)) { e.preventDefault(); pushDigit(k); return; }
-      if (k === 'Backspace' || k === 'Delete') { e.preventDefault(); buff = buff.slice(0, -1); pinInput.value = buff; render(); return; }
-      if (k === 'Enter') { e.preventDefault(); finalize(); return; }
-      if (k === 'Escape') { e.preventDefault(); clear(''); return; }
-    });
-
-    render();
+    pinField.focus();
   }
 
   // Settings form
@@ -131,7 +65,7 @@
     const hasCustom = !!(cfg.eventISO && cfg.eventISO.trim());
     weeklyEl.checked = !hasCustom;
     eventEl.disabled = weeklyEl.checked;
-    eventEl.value = hasCustom ? toLocalDatetimeValue(cfg.eventISO) : '';
+    eventEl.value = hasCustom ? new Date(cfg.eventISO).toISOString().slice(0,16) : '';
   }
 
   weeklyEl.addEventListener('change', () => { eventEl.disabled = weeklyEl.checked; if (weeklyEl.checked) eventEl.value = ''; });
@@ -143,7 +77,7 @@
       ip: (ipEl.value || '').trim() || defaultConfig.ip,
       discord: (discordEl.value || '').trim() || defaultConfig.discord,
       tagline: (taglineEl.value || '').trim() || defaultConfig.tagline,
-      eventISO: weeklyEl.checked ? '' : fromLocalDatetimeValue((eventEl.value || '').trim())
+      eventISO: weeklyEl.checked ? '' : new Date(eventEl.value).toISOString()
     };
     try {
       const saved = await writeServerConfig(cfg);
@@ -165,5 +99,5 @@
   });
 
   if (sessionStorage.getItem(SESSION_UNLOCK) === '1') { setUnlocked(true); initForm(); }
-  else { setUnlocked(false); initKeypad(); }
+  else { setUnlocked(false); initUnlock(); }
 })();
