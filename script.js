@@ -195,8 +195,8 @@
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
-      width = Math.ceil(rect.width);
-      height = Math.ceil(rect.height);
+      width = Math.ceil(rect.width) + 4; // overscan to cover edges
+      height = Math.ceil(rect.height) + 4;
       // Fit canvas to visible size (avoid rounding gaps)
       canvas.width = Math.ceil(width * dpr);
       canvas.height = Math.ceil(height * dpr);
