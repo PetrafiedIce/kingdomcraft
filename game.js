@@ -224,6 +224,26 @@
       }
     }
 
+    // Bumpers (circular)
+    const bumpers = holes[holeIndex].bumpers || [];
+    for (let b of bumpers) {
+      const dx = ball.x - b.x; const dy = ball.y - b.y; const dist = Math.hypot(dx, dy);
+      const minDist = ball.r + b.r;
+      if (dist < minDist) {
+        // push out
+        const nx = dx / (dist || 1);
+        const ny = dy / (dist || 1);
+        ball.x = b.x + nx * minDist;
+        ball.y = b.y + ny * minDist;
+        // reflect velocity along normal with bounce
+        const vDotN = ball.vx * nx + ball.vy * ny;
+        ball.vx = ball.vx - 2 * vDotN * nx;
+        ball.vy = ball.vy - 2 * vDotN * ny;
+        ball.vx *= physics.bounce * 1.05;
+        ball.vy *= physics.bounce * 1.05;
+      }
+    }
+
     // Borders
     const left = 0, right = viewW, top = 0, bottom = viewH;
     if (ball.x - ball.r < left) { ball.x = left + ball.r; ball.vx = -ball.vx * physics.bounce; }
@@ -273,9 +293,27 @@
     ctx.fill();
 
     // Walls
-    // constant border rectangles for world bounds
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    for (let w of holes[holeIndex].walls) ctx.fillRect(w.x, w.y, w.w, w.h);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    for (let w of holes[holeIndex].walls) {
+      ctx.fillRect(w.x, w.y, w.w, w.h);
+      // add subtle edge
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+    }
+
+    // Bumpers
+    if (holes[holeIndex].bumpers) {
+      for (let b of holes[holeIndex].bumpers) {
+        const g = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.r);
+        g.addColorStop(0, '#4cf0ba');
+        g.addColorStop(1, '#17996e');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.stroke();
+      }
+    }
 
     // Ball
     ctx.beginPath();
@@ -365,14 +403,15 @@
         x: right - 60 - Math.floor(rand() * Math.max(40, width * 0.25)),
         y: top + 60 + Math.floor(rand() * Math.max(40, height * 0.35))
       };
-      const walls = createRandomWalls(rand, tee, cup, left, right, top, bottom);
-      course.push({ par, tee, cup, walls });
+      const { walls, bumpers } = createObstacles(rand, tee, cup, left, right, top, bottom);
+      course.push({ par, tee, cup, walls, bumpers });
     }
     return course;
   }
 
-  function createRandomWalls(rand, tee, cup, left, right, top, bottom) {
+  function createObstacles(rand, tee, cup, left, right, top, bottom) {
     const walls = [];
+    const bumpers = [];
     const obstacles = 3 + Math.floor(rand() * 4);
     let attempts = 0;
     for (let i = 0; i < obstacles && attempts < 200; ) {
@@ -406,7 +445,29 @@
       walls.push(rect);
       i++;
     }
-    return walls;
+    // Add circular bumpers
+    const bumperCount = 2 + Math.floor(rand() * 3);
+    attempts = 0;
+    for (let i = 0; i < bumperCount && attempts < 200; ) {
+      attempts++;
+      const r = 12 + Math.floor(rand() * 10);
+      const x = left + 80 + Math.floor(rand() * Math.max(80, right - left - 160));
+      const y = top + 80 + Math.floor(rand() * Math.max(80, bottom - top - 160));
+      const b = { x, y, r };
+      // Avoid tee/cup and corridor
+      if (Math.hypot(x - tee.x, y - tee.y) < r + 60) continue;
+      if (Math.hypot(x - cup.x, y - cup.y) < r + 60) continue;
+      if (circleIntersectsSegment(b, { x: tee.x, y: tee.y }, { x: cup.x, y: cup.y }, 24)) continue;
+      // Avoid walls and other bumpers
+      let bad = false;
+      for (let w of walls) { if (circleIntersectsRect(x, y, r + 8, w)) { bad = true; break; } }
+      if (bad) continue;
+      for (let bb of bumpers) { if (Math.hypot(x - bb.x, y - bb.y) < r + bb.r + 16) { bad = true; break; } }
+      if (bad) continue;
+      bumpers.push(b);
+      i++;
+    }
+    return { walls, bumpers };
   }
 
   function rectIntersectsCircle(rect, cx, cy, cr) {
@@ -415,6 +476,21 @@
     const dx = cx - nearestX;
     const dy = cy - nearestY;
     return (dx*dx + dy*dy) <= cr*cr;
+  }
+
+  function circleIntersectsRect(cx, cy, cr, rect) {
+    return rectIntersectsCircle(rect, cx, cy, cr);
+  }
+
+  function circleIntersectsSegment(c, a, b, padding) {
+    const pr = c.r + (padding || 0);
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const wx = c.x - a.x, wy = c.y - a.y;
+    const proj = (wx*vx + wy*vy) / (vx*vx + vy*vy);
+    const t = Math.max(0, Math.min(1, proj));
+    const px = a.x + vx * t, py = a.y + vy * t;
+    const dx = c.x - px, dy = c.y - py;
+    return (dx*dx + dy*dy) <= pr*pr;
   }
 
   function rectsOverlap(a, b, margin) {
