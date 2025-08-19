@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const compression = require('compression');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +35,16 @@ function writeConfig(cfg) {
 }
 
 app.use(express.json());
+app.use(compression());
+
+// Static asset caching
+const oneYear = 31536000;
+app.use('/script.js', (req, res, next) => { res.setHeader('Cache-Control', 'public, max-age=3600'); next(); });
+app.use('/styles.css', (req, res, next) => { res.setHeader('Cache-Control', 'public, max-age=3600'); next(); });
+app.use('/favicon.svg', (req, res, next) => { res.setHeader('Cache-Control', `public, max-age=${oneYear}, immutable`); next(); });
+app.use('/og-image.svg', (req, res, next) => { res.setHeader('Cache-Control', `public, max-age=${oneYear}, immutable`); next(); });
+app.use('/manifest.webmanifest', (req, res, next) => { res.setHeader('Cache-Control', 'public, max-age=3600'); next(); });
+app.use('/sw.js', (req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
 
 // Simple request logger
 app.use((req, _res, next) => {

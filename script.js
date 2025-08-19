@@ -175,6 +175,13 @@
         try { const cfg = JSON.parse(e.data); currentConfig = cfg; saveLocal(cfg); applyConfig(cfg); } catch(_) {}
       });
     } catch (_) { /* ignore SSE failure */ }
+
+    // Register Service Worker
+    try {
+      if ('serviceWorker' in navigator) {
+        await navigator.serviceWorker.register('/sw.js');
+      }
+    } catch (_) { /* ignore SW failure */ }
   })();
 
   const canvas = document.getElementById('particles-canvas');
@@ -188,11 +195,11 @@
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
-      width = Math.floor(rect.width);
-      height = Math.floor(rect.height);
-      // Fit canvas to visible size
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
+      width = Math.ceil(rect.width) + 4; // overscan to cover edges
+      height = Math.ceil(rect.height) + 4;
+      // Fit canvas to visible size (avoid rounding gaps)
+      canvas.width = Math.ceil(width * dpr);
+      canvas.height = Math.ceil(height * dpr);
       ctx.setTransform(1,0,0,1,0,0);
       ctx.scale(dpr, dpr);
       generateParticles();
@@ -204,15 +211,26 @@
     }
 
     function rand(min, max) { return Math.random() * (max - min) + min; }
-    function spawn() { return { x: rand(0, width), y: rand(height * 0.2, height), r: rand(0.7, 2.2), vy: rand(-0.25, -0.8), vx: rand(-0.15, 0.15), a: rand(0.25, 0.9), hue: rand(42, 52) }; }
+    function spawn() {
+      // Fill entire canvas horizontally; start an additional 20px lower from previous
+      return {
+        x: rand(-20, width + 20),
+        y: rand(height * 0.15 + 70, height + 70),
+        r: rand(0.7, 2.2),
+        vy: rand(-0.25, -0.8),
+        vx: rand(-0.15, 0.15),
+        a: rand(0.25, 0.9),
+        hue: rand(42, 52)
+      };
+    }
 
     let anim = null;
     function draw() {
       ctx.clearRect(0, 0, width, height);
       for (let p of particles) {
         p.x += p.vx; p.y += p.vy; p.a *= 0.9995;
-        if (p.y < -10 || p.a < 0.02) Object.assign(p, spawn(), { y: height + 10 });
-        if (p.x < -10) p.x = width + 10; else if (p.x > width + 10) p.x = -10;
+        if (p.y < -10 || p.a < 0.02) Object.assign(p, spawn(), { y: height + 80 });
+        if (p.x < -20) p.x = width + 20; else if (p.x > width + 20) p.x = -20;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = `hsla(${p.hue}, 85%, 62%, ${p.a})`;
         ctx.shadowBlur = 12; ctx.shadowColor = `hsla(${p.hue}, 85%, 52%, ${p.a * 0.85})`;
