@@ -212,10 +212,10 @@
 
     function rand(min, max) { return Math.random() * (max - min) + min; }
     function spawn() {
-      // Fill entire canvas horizontally; allow some to start off-left to avoid visible bands
+      // Bias sparks lower so they sit visually lower in the hero
       return {
         x: rand(-20, width + 20),
-        y: rand(height * 0.15, height),
+        y: rand(height * 0.55, height + 10),
         r: rand(0.7, 2.2),
         vy: rand(-0.25, -0.8),
         vx: rand(-0.15, 0.15),
@@ -247,4 +247,32 @@
   // Footer year
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
+  // Reveal-on-scroll
+  try {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+  } catch (_) { /* no-op */ }
+
+  // Add pulse on successful copy
+  function pulseEl(el) { if (!el) return; el.classList.add('pulse'); setTimeout(() => el.classList.remove('pulse'), 800); }
+  if (copyIpBtn) {
+    copyIpBtn.addEventListener('click', () => {
+      const card = copyIpBtn.closest('.ip-card');
+      pulseEl(card);
+    });
+  }
+  document.querySelectorAll('.copy-inline').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const container = btn.closest('.ip-card') || btn.closest('.join-card');
+      pulseEl(container);
+    });
+  });
 })();

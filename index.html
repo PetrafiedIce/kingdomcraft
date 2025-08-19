@@ -99,13 +99,15 @@
           <code id="server-ip" class="ip">play.kingdomcraft.net</code>
           <button class="btn btn-secondary" id="copy-ip-btn" data-copied-label="Copied!" type="button" aria-live="polite">Copy IP</button>
         </div>
+        <a href="#features" class="scroll-indicator" aria-label="Scroll to features"><span class="chevron"></span></a>
+        <a href="#features" class="scroll-indicator" aria-label="Scroll to features"><span class="chevron"></span></a>
       </div>
     </section>
 
     <section id="features" class="features" aria-labelledby="features-title">
       <h2 id="features-title" class="section-title">Choose Your Legend</h2>
       <div class="feature-grid">
-        <article class="feature-card feature-gladiator" data-tilt tabindex="0" aria-label="Gladiator SMP">
+        <article class="feature-card feature-gladiator reveal" data-tilt tabindex="0" aria-label="Gladiator SMP">
           <div class="feature-art" aria-hidden="true">
             <span class="emoji" role="img" aria-label="Crossed swords">⚔️</span>
           </div>
@@ -121,7 +123,7 @@
           </div>
         </article>
 
-        <article class="feature-card feature-uhc" data-tilt tabindex="0" aria-label="UHC Events">
+        <article class="feature-card feature-uhc reveal" data-tilt tabindex="0" aria-label="UHC Events">
           <div class="feature-art" aria-hidden="true">
             <span class="emoji" role="img" aria-label="Shield">🛡️</span>
           </div>
@@ -140,7 +142,7 @@
     </section>
 
     <section id="uhc" class="uhc-section" aria-labelledby="uhc-title" data-event-iso="">
-      <div class="uhc-inner">
+      <div class="uhc-inner reveal">
         <h2 id="uhc-title" class="section-title">Next UHC Event</h2>
         <p class="event-date">Starts <time id="uhc-date-display" datetime=""></time> <span class="tz-note">(auto in your timezone)</span></p>
         <div class="countdown" role="timer" aria-live="polite">
@@ -159,7 +161,7 @@
     <section id="testimonials" class="testimonials" aria-labelledby="testimonials-title">
       <h2 id="testimonials-title" class="section-title">What Players Say</h2>
       <div class="quote-grid">
-        <figure class="quote-card">
+        <figure class="quote-card reveal">
           <blockquote>
             “Best PvP ladders I’ve played in years. The arenas feel epic and fair.”
           </blockquote>
@@ -169,7 +171,7 @@
             <span class="meta">Gladiator Champion</span>
           </figcaption>
         </figure>
-        <figure class="quote-card">
+        <figure class="quote-card reveal">
           <blockquote>
             “UHC nights are wild. Custom seeds and the casters make it a show.”
           </blockquote>
@@ -179,7 +181,7 @@
             <span class="meta">UHC Finalist</span>
           </figcaption>
         </figure>
-        <figure class="quote-card">
+        <figure class="quote-card reveal">
           <blockquote>
             “The medieval vibe is perfect. Community is competitive but respectful.”
           </blockquote>
@@ -195,7 +197,7 @@
     <section id="join" class="join" aria-labelledby="join-title">
       <h2 id="join-title" class="section-title">Join KingdomCraft</h2>
       <div class="join-grid">
-        <div class="join-card">
+        <div class="join-card reveal">
           <h3>Java Edition</h3>
           <p>Add the server using this IP:</p>
           <div class="ip-card ip-large">
@@ -203,7 +205,7 @@
             <button class="btn btn-secondary copy-inline" data-copy="play.kingdomcraft.net" type="button">Copy</button>
           </div>
         </div>
-        <div class="join-card">
+        <div class="join-card reveal">
           <h3>Community</h3>
           <p>Announcements, signups, and support.</p>
           <a href="https://discord.gg/kingdomcraft" target="_blank" rel="noopener" class="btn btn-primary discord-link">Join our Discord</a>
