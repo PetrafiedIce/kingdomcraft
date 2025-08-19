@@ -273,6 +273,20 @@
     return (dx*dx + dy*dy) <= cr*cr;
   }
 
+  function roundRect(ctx, x, y, w, h, rx, ry) {
+    rx = Math.min(rx, w / 2); ry = Math.min(ry, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rx, y);
+    ctx.lineTo(x + w - rx, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + ry);
+    ctx.lineTo(x + w, y + h - ry);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - rx, y + h);
+    ctx.lineTo(x + rx, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - ry);
+    ctx.lineTo(x, y + ry);
+    ctx.quadraticCurveTo(x, y, x + rx, y);
+  }
+
   // Rendering
   let nowMs = 0;
   function draw(aimPos) {
@@ -295,23 +309,36 @@
     // Walls
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     for (let w of holes[holeIndex].walls) {
-      ctx.fillRect(w.x, w.y, w.w, w.h);
-      // add subtle edge
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-      ctx.strokeRect(w.x + 0.5, w.y + 0.5, w.w - 1, w.h - 1);
+      // rounded beveled walls
+      const rx = 8, ry = 8;
+      roundRect(ctx, w.x, w.y, w.w, w.h, rx, ry);
+      const wallGrad = ctx.createLinearGradient(w.x, w.y, w.x, w.y + w.h);
+      wallGrad.addColorStop(0, 'rgba(230,255,245,0.28)');
+      wallGrad.addColorStop(1, 'rgba(200,240,228,0.18)');
+      ctx.fillStyle = wallGrad;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.stroke();
     }
 
     // Bumpers
     if (holes[holeIndex].bumpers) {
       for (let b of holes[holeIndex].bumpers) {
-        const g = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, b.r);
-        g.addColorStop(0, '#4cf0ba');
-        g.addColorStop(1, '#17996e');
+        // glossy bumper
+        const g = ctx.createRadialGradient(b.x - b.r * 0.4, b.y - b.r * 0.4, 1, b.x, b.y, b.r);
+        g.addColorStop(0, '#7af7cf');
+        g.addColorStop(0.6, '#2fd89b');
+        g.addColorStop(1, '#12805b');
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.stroke();
+        // specular highlight
+        ctx.beginPath();
+        ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.35, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.stroke();
       }
     }
 
@@ -379,11 +406,50 @@
 
   function drawCourse() {
     // Fullscreen background
-    const grd = ctx.createLinearGradient(0, 0, 0, viewH);
-    grd.addColorStop(0, '#0d3c2c');
-    grd.addColorStop(1, '#0b3326');
-    ctx.fillStyle = grd;
+    const bg = ctx.createLinearGradient(0, 0, 0, viewH);
+    bg.addColorStop(0, '#0d3c2c');
+    bg.addColorStop(1, '#0b3326');
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, viewW, viewH);
+
+    // Fairway path (visual only)
+    const hole = holes[holeIndex];
+    if (hole && hole.fairway) {
+      const { cpx, cpy, width } = hole.fairway;
+      const tee = hole.tee; const cup = hole.cup;
+      // Edge border
+      ctx.strokeStyle = 'rgba(7,20,44,0.85)';
+      ctx.lineWidth = width + 16;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(tee.x, tee.y);
+      ctx.quadraticCurveTo(cpx, cpy, cup.x, cup.y);
+      ctx.stroke();
+      // Fairway fill
+      const fw = ctx.createLinearGradient(0, Math.min(tee.y, cup.y), 0, Math.max(tee.y, cup.y));
+      fw.addColorStop(0, '#0f4b36');
+      fw.addColorStop(1, '#0c3e2c');
+      ctx.strokeStyle = fw;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(tee.x, tee.y);
+      ctx.quadraticCurveTo(cpx, cpy, cup.x, cup.y);
+      ctx.stroke();
+      // Subtle mowing stripes
+      const stripes = 6;
+      for (let i = 0; i < stripes; i++) {
+        const t = (i + 0.5) / stripes;
+        const w = width * (0.7 + 0.2 * Math.sin(i * 2));
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = w * 0.12;
+        ctx.beginPath();
+        const mx = (1 - t) * (1 - t) * tee.x + 2 * (1 - t) * t * cpx + t * t * cup.x;
+        const my = (1 - t) * (1 - t) * tee.y + 2 * (1 - t) * t * cpy + t * t * cup.y;
+        ctx.arc(mx, my, w * 0.35, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
   }
 
   // Procedural course generation
@@ -403,8 +469,17 @@
         x: right - 60 - Math.floor(rand() * Math.max(40, width * 0.25)),
         y: top + 60 + Math.floor(rand() * Math.max(40, height * 0.35))
       };
+      // Fairway control
+      const rand2 = mulberry32((seed ^ (i + 1) * 0x9E3779B1) >>> 0);
+      const dx = cup.x - tee.x; const dy = cup.y - tee.y; const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len; const ny = dx / len;
+      const sign = rand2() > 0.5 ? 1 : -1;
+      const off = Math.min(200, Math.max(80, len * (0.18 + rand2() * 0.08))) * sign;
+      const cpx = (tee.x + cup.x) / 2 + nx * off;
+      const cpy = (tee.y + cup.y) / 2 + ny * off;
+      const fairway = { cpx, cpy, width: Math.max(100, Math.min(220, 140 + rand2() * 60)) };
       const { walls, bumpers } = createObstacles(rand, tee, cup, left, right, top, bottom);
-      course.push({ par, tee, cup, walls, bumpers });
+      course.push({ par, tee, cup, walls, bumpers, fairway });
     }
     return course;
   }
