@@ -60,3 +60,16 @@ body {
   .main { grid-template-columns: 1fr; }
 }
 
+/* Modal */
+.modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.55); padding: 16px; }
+.modal[aria-hidden="true"] { display: none; }
+.modal-content { width: min(720px, 92vw); background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid rgba(56,217,150,0.2); border-radius: 14px; box-shadow: var(--shadow); padding: 16px; }
+.modal-title { margin: 6px 4px 14px; }
+.upgrade-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.upgrade-card { border: 1px solid rgba(56,217,150,0.25); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.03); display: grid; gap: 6px; }
+.upgrade-card h3 { margin: 0; font-size: 16px; }
+.upgrade-card p { margin: 0; color: var(--muted); font-size: 13px; }
+.upgrade-card .actions { display: flex; justify-content: flex-end; }
+.badge { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 999px; border: 1px solid rgba(56,217,150,0.3); color: var(--text); background: rgba(56,217,150,0.12); }
+.modal-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+

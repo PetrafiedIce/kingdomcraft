@@ -29,6 +29,8 @@
     <aside class="hud">
       <div class="stat"><span class="label">Mode</span><span id="mode-display">Daily</span></div>
       <div class="stat" id="daily-row"><span class="label">Daily</span><span id="daily-id">—</span></div>
+      <div class="stat"><span class="label">Stars</span><span id="stars">0</span></div>
+      <div class="stat"><span class="label">Upgrades</span><span id="upgrades-summary">None</span></div>
       <div class="stat"><span class="label">Hole</span><span id="hole-index">1</span></div>
       <div class="stat"><span class="label">Par</span><span id="hole-par">3</span></div>
       <div class="stat"><span class="label">Strokes</span><span id="strokes">0</span></div>
@@ -44,6 +46,16 @@
   <footer class="site-footer">
     <span>Built fresh — no legacy code.</span>
   </footer>
+
+  <div id="upgrade-modal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <h2 class="modal-title">Choose an upgrade</h2>
+      <div id="upgrade-options" class="upgrade-list"></div>
+      <div class="modal-actions">
+        <button id="skip-upgrade" class="btn btn-ghost">Skip</button>
+      </div>
+    </div>
+  </div>
 
   <script src="game.js" defer></script>
 </body>
