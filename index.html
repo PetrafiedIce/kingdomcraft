@@ -3,20 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>KingdomCraft — Forge Your Legacy in Battle!</title>
-  <meta name="description" content="KingdomCraft Minecraft server: Gladiator SMP with ranked PvP and faction wars, plus epic UHC Events with custom maps, prizes, and live commentary.">
+  <title>KingdomCraft — Claim Your Crown</title>
+  <meta name="description" content="KingdomCraft: a royal Minecraft realm with ranked PvP, Gladiator SMP, and grand UHC tournaments. Join the court and forge your legacy.">
   <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#0f1115">
+  <meta name="theme-color" content="#12091e">
   <link rel="canonical" href="/">
 
-  <!-- Icons & PWA -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/favicon.svg">
   <link rel="manifest" href="/manifest.webmanifest">
 
-  <!-- Open Graph / Twitter -->
-  <meta property="og:title" content="KingdomCraft — Forge Your Legacy in Battle!">
-  <meta property="og:description" content="Ranked PvP, faction warfare, and epic UHC nights. Claim your crown on KingdomCraft.">
+  <meta property="og:title" content="KingdomCraft — Claim Your Crown">
+  <meta property="og:description" content="Ranked PvP, faction warfare, and grand UHC tournaments. The throne awaits.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="/og-image.svg">
   <meta property="og:url" content="/">
@@ -24,46 +22,42 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Uncial+Antiqua&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800;900&family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "VideoGame",
     "name": "KingdomCraft",
-    "description": "Gladiator SMP with ranked PvP, faction wars, and UHC events.",
+    "description": "Gladiator SMP with ranked PvP and royal UHC tournaments.",
     "url": "/",
     "inLanguage": "en",
     "genre": ["PvP", "SMP", "UHC"],
     "applicationCategory": "GameServer",
     "image": "/og-image.svg",
-    "publisher": {
-      "@type": "Organization",
-      "name": "KingdomCraft"
-    }
+    "publisher": { "@type": "Organization", "name": "KingdomCraft" }
   }
   </script>
 </head>
 <body>
   <div class="bg-texture" aria-hidden="true"></div>
 
-  <header class="site-header" role="banner">
-    <a href="#top" class="brand" aria-label="KingdomCraft home">
-      <svg class="icon icon-crown" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-        <path d="M8 44 L8 54 L56 54 L56 44 Z" fill="currentColor" opacity="0.9"></path>
-        <path d="M8 44 L20 20 L32 40 L44 20 L56 44 Z" fill="currentColor"></path>
-        <circle cx="20" cy="20" r="3" fill="currentColor"></circle>
-        <circle cx="44" cy="20" r="3" fill="currentColor"></circle>
-        <circle cx="32" cy="16" r="3" fill="currentColor"></circle>
+  <header class="royal-header" role="banner">
+    <a href="#top" class="crest" aria-label="KingdomCraft home">
+      <svg class="icon-crest" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <path d="M8 48 L8 56 L56 56 L56 48 Z" fill="currentColor" opacity="0.9"></path>
+        <path d="M8 48 L20 18 L32 40 L44 18 L56 48 Z" fill="currentColor"></path>
+        <circle cx="20" cy="18" r="3" fill="currentColor"></circle>
+        <circle cx="44" cy="18" r="3" fill="currentColor"></circle>
+        <circle cx="32" cy="14" r="3" fill="currentColor"></circle>
       </svg>
-      <span class="brand-text">KingdomCraft</span>
+      <span class="wordmark">KingdomCraft</span>
     </a>
 
     <nav class="site-nav" id="site-nav" role="navigation" aria-label="Primary">
-      <a href="#features" class="nav-link">Features</a>
-      <a href="#uhc" class="nav-link">UHC Events</a>
+      <a href="#features" class="nav-link">Realms</a>
+      <a href="#uhc" class="nav-link">Tournaments</a>
       <a href="#join" class="btn btn-primary nav-cta">Join Now</a>
     </nav>
 
@@ -75,137 +69,121 @@
   </header>
 
   <main id="top">
-    <section class="hero" aria-label="Hero banner">
+    <section class="hero" aria-label="Royal hero banner">
       <canvas id="particles-canvas" aria-hidden="true"></canvas>
       <div class="hero-inner">
-        <div class="logo-lockup">
-          <svg class="icon icon-crown-lg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <div class="ornate-frame">
+          <div class="frame-top" aria-hidden="true"></div>
+          <div class="frame-bottom" aria-hidden="true"></div>
+          <div class="frame-left" aria-hidden="true"></div>
+          <div class="frame-right" aria-hidden="true"></div>
+        </div>
+        <div class="lockup">
+          <svg class="icon-crest-lg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
             <path d="M8 44 L8 52 L56 52 L56 44 Z" fill="currentColor" opacity="0.85"></path>
             <path d="M8 44 L20 16 L32 38 L44 16 L56 44 Z" fill="currentColor"></path>
             <circle cx="20" cy="16" r="3" fill="currentColor"></circle>
             <circle cx="44" cy="16" r="3" fill="currentColor"></circle>
             <circle cx="32" cy="12" r="3" fill="currentColor"></circle>
           </svg>
-          <h1 class="site-title">KingdomCraft</h1>
+          <h1 class="title">KingdomCraft</h1>
         </div>
         <p id="tagline" class="tagline">Forge Your Legacy in Battle!</p>
-        <p class="subtext">Enter a realm of ranked PvP, faction warfare, and epic UHC showdowns. Claim your crown.</p>
-        <div class="cta-group">
-          <a href="#join" class="btn btn-primary btn-lg" aria-label="Join KingdomCraft now">Join Now</a>
+        <p class="lede">A royal realm of ranked PvP, Gladiator SMP, and grand UHC tournaments. The throne awaits the bold.</p>
+        <div class="cta-row">
+          <a href="#join" class="btn btn-primary btn-lg" aria-label="Join KingdomCraft now">Join the Kingdom</a>
           <a href="https://discord.gg/kingdomcraft" target="_blank" rel="noopener" class="btn btn-ghost btn-lg discord-link" aria-label="Open KingdomCraft Discord">Discord</a>
         </div>
-        <div class="ip-card" role="note" aria-label="Server IP">
-          <span class="ip-label">Server IP</span>
-          <code id="server-ip" class="ip">play.kingdomcraft.net</code>
-          <button class="btn btn-secondary" id="copy-ip-btn" data-copied-label="Copied!" type="button" aria-live="polite">Copy IP</button>
+        <div class="plaque" role="note" aria-label="Server IP">
+          <span class="plaque-label">Server IP</span>
+          <code id="server-ip" class="plaque-ip">play.kingdomcraft.net</code>
+          <button class="btn btn-outline" id="copy-ip-btn" data-copied-label="Copied!" type="button" aria-live="polite">Copy</button>
         </div>
-        <a href="#features" class="scroll-indicator" aria-label="Scroll to features"><span class="chevron"></span></a>
-        <a href="#features" class="scroll-indicator" aria-label="Scroll to features"><span class="chevron"></span></a>
+        <a href="#features" class="scroll-indicator" aria-label="Scroll to realms"><span class="chevron"></span></a>
       </div>
     </section>
 
-    <section id="features" class="features" aria-labelledby="features-title">
-      <h2 id="features-title" class="section-title">Choose Your Legend</h2>
-      <div class="feature-grid">
-        <article class="feature-card feature-gladiator reveal" data-tilt tabindex="0" aria-label="Gladiator SMP">
-          <div class="feature-art" aria-hidden="true">
-            <span class="emoji" role="img" aria-label="Crossed swords">⚔️</span>
-          </div>
-          <div class="feature-content">
-            <h3>Gladiator SMP</h3>
-            <p class="feature-sub">Competitive survival with ranked PvP and faction warfare.</p>
-            <ul class="feature-list">
-              <li>Ranked arenas and seasonal ladders</li>
-              <li>Factions, raids, and territory control</li>
-              <li>Economy, trading, and blacksmithing</li>
+    <section id="features" class="realms" aria-labelledby="realms-title">
+      <h2 id="realms-title" class="section-title">Royal Realms</h2>
+      <p class="section-sub">Choose your path. Prove your valor.</p>
+      <div class="realm-grid">
+        <article class="realm-card" data-tilt tabindex="0" aria-label="Gladiator SMP">
+          <div class="realm-art" aria-hidden="true">⚔️</div>
+          <div class="realm-body">
+            <h3 class="realm-title">Gladiator SMP</h3>
+            <p class="realm-copy">Competitive survival with ranked ladders and faction warfare.</p>
+            <ul class="realm-list">
+              <li>Seasonal ladders and ranked arenas</li>
+              <li>Factions, raids, territory control</li>
+              <li>Economy, trading, blacksmithing</li>
             </ul>
             <a href="#join" class="btn btn-outline">Enter the Arena</a>
           </div>
         </article>
 
-        <article class="feature-card feature-uhc reveal" data-tilt tabindex="0" aria-label="UHC Events">
-          <div class="feature-art" aria-hidden="true">
-            <span class="emoji" role="img" aria-label="Shield">🛡️</span>
-          </div>
-          <div class="feature-content">
-            <h3>UHC Events</h3>
-            <p class="feature-sub">Ultra Hardcore with custom maps, prizes, and live commentary.</p>
-            <ul class="feature-list">
+        <article class="realm-card" data-tilt tabindex="0" aria-label="UHC Events">
+          <div class="realm-art" aria-hidden="true">🛡️</div>
+          <div class="realm-body">
+            <h3 class="realm-title">UHC Tournaments</h3>
+            <p class="realm-copy">Ultra Hardcore with custom maps, prizes, and live commentary.</p>
+            <ul class="realm-list">
               <li>Unique worlds and game modifiers</li>
-              <li>Prizes, titles, and exclusive cosmetics</li>
-              <li>Shoutcasters, replays, and highlights</li>
+              <li>Prizes, titles, exclusive cosmetics</li>
+              <li>Shoutcasters, replays, highlights</li>
             </ul>
-            <a href="#uhc" class="btn btn-outline">View Next Event</a>
+            <a href="#uhc" class="btn btn-outline">View Next Tournament</a>
           </div>
         </article>
       </div>
     </section>
 
-    <section id="uhc" class="uhc-section" aria-labelledby="uhc-title" data-event-iso="">
-      <div class="uhc-inner reveal">
-        <h2 id="uhc-title" class="section-title">Next UHC Event</h2>
-        <p class="event-date">Starts <time id="uhc-date-display" datetime=""></time> <span class="tz-note">(auto in your timezone)</span></p>
+    <section id="uhc" class="tournament" aria-labelledby="tourney-title" data-event-iso="">
+      <div class="tourney-inner">
+        <h2 id="tourney-title" class="section-title">Next Grand Tournament</h2>
+        <p class="event-date">Begins <time id="uhc-date-display" datetime=""></time> <span class="tz-note">(auto in your timezone)</span></p>
         <div class="countdown" role="timer" aria-live="polite">
-          <div class="time-box"><span id="cd-days" class="num">00</span><span class="label">Days</span></div>
-          <div class="time-box"><span id="cd-hours" class="num">00</span><span class="label">Hours</span></div>
-          <div class="time-box"><span id="cd-mins" class="num">00</span><span class="label">Minutes</span></div>
-          <div class="time-box"><span id="cd-secs" class="num">00</span><span class="label">Seconds</span></div>
+          <div class="time"><span id="cd-days" class="num">00</span><span class="label">Days</span></div>
+          <div class="time"><span id="cd-hours" class="num">00</span><span class="label">Hours</span></div>
+          <div class="time"><span id="cd-mins" class="num">00</span><span class="label">Minutes</span></div>
+          <div class="time"><span id="cd-secs" class="num">00</span><span class="label">Seconds</span></div>
         </div>
-        <div class="uhc-cta">
+        <div class="tourney-cta">
           <a href="https://discord.gg/kingdomcraft" target="_blank" rel="noopener" class="btn btn-primary discord-link">Sign Up on Discord</a>
           <a href="#join" class="btn btn-ghost">Copy Server IP</a>
         </div>
       </div>
     </section>
 
-    <section id="testimonials" class="testimonials" aria-labelledby="testimonials-title">
-      <h2 id="testimonials-title" class="section-title">What Players Say</h2>
-      <div class="quote-grid">
-        <figure class="quote-card reveal">
-          <blockquote>
-            “Best PvP ladders I’ve played in years. The arenas feel epic and fair.”
-          </blockquote>
-          <figcaption>
-            <span class="avatar">👑</span>
-            <span class="name">SirBastion</span>
-            <span class="meta">Gladiator Champion</span>
-          </figcaption>
+    <section id="testimonials" class="court" aria-labelledby="court-title">
+      <h2 id="court-title" class="section-title">Voices of the Court</h2>
+      <div class="court-grid">
+        <figure class="decree">
+          <blockquote>“Best PvP ladders I’ve played in years. The arenas feel epic and fair.”</blockquote>
+          <figcaption><span class="sigil">👑</span><span class="name">SirBastion</span><span class="meta">Gladiator Champion</span></figcaption>
         </figure>
-        <figure class="quote-card reveal">
-          <blockquote>
-            “UHC nights are wild. Custom seeds and the casters make it a show.”
-          </blockquote>
-          <figcaption>
-            <span class="avatar">⚔️</span>
-            <span class="name">AuroraArrow</span>
-            <span class="meta">UHC Finalist</span>
-          </figcaption>
+        <figure class="decree">
+          <blockquote>“UHC nights are wild. Custom seeds and the casters make it a show.”</blockquote>
+          <figcaption><span class="sigil">⚔️</span><span class="name">AuroraArrow</span><span class="meta">UHC Finalist</span></figcaption>
         </figure>
-        <figure class="quote-card reveal">
-          <blockquote>
-            “The medieval vibe is perfect. Community is competitive but respectful.”
-          </blockquote>
-          <figcaption>
-            <span class="avatar">🛡️</span>
-            <span class="name">Stonewright</span>
-            <span class="meta">SMP Veteran</span>
-          </figcaption>
+        <figure class="decree">
+          <blockquote>“The medieval vibe is perfect. Community is competitive but respectful.”</blockquote>
+          <figcaption><span class="sigil">🛡️</span><span class="name">Stonewright</span><span class="meta">SMP Veteran</span></figcaption>
         </figure>
       </div>
     </section>
 
     <section id="join" class="join" aria-labelledby="join-title">
-      <h2 id="join-title" class="section-title">Join KingdomCraft</h2>
+      <h2 id="join-title" class="section-title">Join the Kingdom</h2>
       <div class="join-grid">
-        <div class="join-card reveal">
+        <div class="join-card">
           <h3>Java Edition</h3>
           <p>Add the server using this IP:</p>
-          <div class="ip-card ip-large">
-            <code id="server-ip-join" class="ip">play.kingdomcraft.net</code>
-            <button class="btn btn-secondary copy-inline" data-copy="play.kingdomcraft.net" type="button">Copy</button>
+          <div class="plaque large">
+            <code id="server-ip-join" class="plaque-ip">play.kingdomcraft.net</code>
+            <button class="btn btn-outline copy-inline" data-copy="play.kingdomcraft.net" type="button">Copy</button>
           </div>
         </div>
-        <div class="join-card reveal">
+        <div class="join-card">
           <h3>Community</h3>
           <p>Announcements, signups, and support.</p>
           <a href="https://discord.gg/kingdomcraft" target="_blank" rel="noopener" class="btn btn-primary discord-link">Join our Discord</a>
@@ -214,7 +192,7 @@
     </section>
   </main>
 
-  <footer class="site-footer">
+  <footer class="royal-footer">
     <div class="footer-grid">
       <div class="footer-col">
         <h4>Social</h4>
