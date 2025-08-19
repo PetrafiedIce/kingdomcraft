@@ -237,10 +237,10 @@
         ball.y = b.y + ny * minDist;
         // reflect velocity along normal with bounce
         const vDotN = ball.vx * nx + ball.vy * ny;
-        ball.vx = ball.vx - 2 * vDotN * nx;
-        ball.vy = ball.vy - 2 * vDotN * ny;
-        ball.vx *= physics.bounce * 1.05;
-        ball.vy *= physics.bounce * 1.05;
+        ball.vx = (ball.vx - 2 * vDotN * nx) * (physics.bounce * 1.25);
+        ball.vy = (ball.vy - 2 * vDotN * ny) * (physics.bounce * 1.25);
+        // record hit for animation
+        b.hitAt = nowMs || performance.now();
       }
     }
 
@@ -349,11 +349,20 @@
         g.addColorStop(1, '#12805b');
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        let scale = 1;
+        if (b.hitAt) {
+          const elapsed = ((nowMs || 0) - b.hitAt) / 1000;
+          if (elapsed < 0.25) {
+            scale = 1 + 0.25 * (1 - elapsed / 0.25);
+          } else {
+            b.hitAt = 0;
+          }
+        }
+        ctx.arc(b.x, b.y, b.r * scale, 0, Math.PI * 2);
         ctx.fill();
         // specular highlight
         ctx.beginPath();
-        ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.35, 0, Math.PI * 2);
+        ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.35 * scale, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.18)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.stroke();
@@ -398,7 +407,7 @@
       const pvy = n * Math.sin(angle);
 
       // Trajectory preview
-      const pts = simulateTrajectory(ball.x, ball.y, pvx, pvy, 200);
+      const pts = simulateTrajectory(ball.x, ball.y, pvx, pvy, 220);
       ctx.setLineDash([10, 10]);
       ctx.lineDashOffset = -nowMs / 20;
       ctx.strokeStyle = 'rgba(50,230,161,0.9)';
@@ -718,6 +727,8 @@
     const pts = [];
     const cup = holes[holeIndex].cup;
     const walls = holes[holeIndex].walls;
+    const bumpers = holes[holeIndex].bumpers || [];
+    const angled = holes[holeIndex].angled || [];
     const fr = physics.friction;
     for (let i = 0; i < steps; i++) {
       x += vx; y += vy;
@@ -729,6 +740,31 @@
           const prevX = x - vx; const prevY = y - vy;
           if (prevX + ball.r <= w.x || prevX - ball.r >= w.x + w.w) vx = -vx * getBounce();
           if (prevY + ball.r <= w.y || prevY - ball.r >= w.y + w.h) vy = -vy * getBounce();
+        }
+      }
+      // bumpers
+      for (let b of bumpers) {
+        const dx = x - b.x, dy = y - b.y; const d = Math.hypot(dx, dy);
+        const minD = ball.r + b.r;
+        if (d < minD) {
+          const nx = dx / (d || 1), ny = dy / (d || 1);
+          x = b.x + nx * minD; y = b.y + ny * minD;
+          const vDotN = vx * nx + vy * ny;
+          vx = (vx - 2 * vDotN * nx) * (getBounce() * 1.25);
+          vy = (vy - 2 * vDotN * ny) * (getBounce() * 1.25);
+        }
+      }
+      // angled segments
+      for (let s of angled) {
+        const c = closestPointOnSegment(s.x1, s.y1, s.x2, s.y2, x, y);
+        const dx = x - c.x, dy = y - c.y; const d = Math.hypot(dx, dy);
+        const minD = ball.r + s.t * 0.5;
+        if (d < minD) {
+          const nx = dx / (d || 1), ny = dy / (d || 1);
+          x = c.x + nx * minD; y = c.y + ny * minD;
+          const vDotN = vx * nx + vy * ny;
+          vx = (vx - 2 * vDotN * nx) * getBounce();
+          vy = (vy - 2 * vDotN * ny) * getBounce();
         }
       }
       // borders
