@@ -244,6 +244,22 @@
       }
     }
 
+    // Angled wall collisions (segment thickness t)
+    const angled = holes[holeIndex].angled || [];
+    for (let s of angled) {
+      const c = closestPointOnSegment(s.x1, s.y1, s.x2, s.y2, ball.x, ball.y);
+      const dx = ball.x - c.x, dy = ball.y - c.y; const d = Math.hypot(dx, dy);
+      const minD = ball.r + s.t * 0.5;
+      if (d < minD) {
+        const nx = dx / (d || 1), ny = dy / (d || 1);
+        ball.x = c.x + nx * minD; ball.y = c.y + ny * minD;
+        const vDotN = ball.vx * nx + ball.vy * ny;
+        ball.vx = ball.vx - 2 * vDotN * nx;
+        ball.vy = ball.vy - 2 * vDotN * ny;
+        ball.vx *= physics.bounce; ball.vy *= physics.bounce;
+      }
+    }
+
     // Borders
     const left = 0, right = viewW, top = 0, bottom = viewH;
     if (ball.x - ball.r < left) { ball.x = left + ball.r; ball.vx = -ball.vx * physics.bounce; }
@@ -323,9 +339,11 @@
 
     // Bumpers
     if (holes[holeIndex].bumpers) {
+      const t = (nowMs || 0) / 1000;
       for (let b of holes[holeIndex].bumpers) {
+        const pulse = 0.06 + 0.04 * Math.sin(t * 2 + (b.x + b.y) * 0.01);
         // glossy bumper
-        const g = ctx.createRadialGradient(b.x - b.r * 0.4, b.y - b.r * 0.4, 1, b.x, b.y, b.r);
+        const g = ctx.createRadialGradient(b.x - b.r * (0.4 + pulse), b.y - b.r * (0.4 + pulse), 1, b.x, b.y, b.r * (1 + pulse));
         g.addColorStop(0, '#7af7cf');
         g.addColorStop(0.6, '#2fd89b');
         g.addColorStop(1, '#12805b');
@@ -339,6 +357,24 @@
         ctx.fillStyle = 'rgba(255,255,255,0.18)';
         ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.stroke();
+      }
+    }
+
+    // Angled walls render
+    if (holes[holeIndex].angled) {
+      for (let s of holes[holeIndex].angled) {
+        const ang = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+        ctx.save();
+        ctx.translate(s.x1, s.y1);
+        ctx.rotate(ang);
+        const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+        roundRect(ctx, 0, -s.t * 0.5, len, s.t, 6, 6);
+        const lg = ctx.createLinearGradient(0, -s.t * 0.5, 0, s.t * 0.5);
+        lg.addColorStop(0, 'rgba(230,255,245,0.3)');
+        lg.addColorStop(1, 'rgba(180,230,215,0.2)');
+        ctx.fillStyle = lg; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.stroke();
+        ctx.restore();
       }
     }
 
@@ -362,10 +398,10 @@
       const pvy = n * Math.sin(angle);
 
       // Trajectory preview
-      const pts = simulateTrajectory(ball.x, ball.y, pvx, pvy, 140);
-      ctx.setLineDash([6, 8]);
+      const pts = simulateTrajectory(ball.x, ball.y, pvx, pvy, 200);
+      ctx.setLineDash([10, 10]);
       ctx.lineDashOffset = -nowMs / 20;
-      ctx.strokeStyle = 'rgba(56,217,150,0.9)';
+      ctx.strokeStyle = 'rgba(50,230,161,0.9)';
       ctx.lineWidth = 2;
       ctx.beginPath();
       if (pts.length) {
@@ -384,14 +420,14 @@
       const pct = n / maxP;
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.r + 8, -Math.PI/2, -Math.PI/2 + Math.PI * 2 * pct);
-      ctx.strokeStyle = 'rgba(56,217,150,0.9)';
+      ctx.strokeStyle = 'rgba(50,230,161,0.9)';
       ctx.lineWidth = 3;
       ctx.stroke();
 
       // HUD power bar
-      ctx.fillStyle = 'rgba(56,217,150,0.25)';
+      ctx.fillStyle = 'rgba(50,230,161,0.25)';
       ctx.fillRect(24, 24, pct * (maxP * 24 / physics.maxPower), 8);
-      ctx.strokeStyle = 'rgba(56,217,150,0.6)';
+      ctx.strokeStyle = 'rgba(50,230,161,0.6)';
       ctx.strokeRect(24, 24, (maxP * 24 / physics.maxPower), 8);
     } else if (!ball.rolling) {
       // Idle pulse around ball
@@ -478,8 +514,8 @@
       const cpx = (tee.x + cup.x) / 2 + nx * off;
       const cpy = (tee.y + cup.y) / 2 + ny * off;
       const fairway = { cpx, cpy, width: Math.max(100, Math.min(220, 140 + rand2() * 60)) };
-      const { walls, bumpers } = createObstacles(rand, tee, cup, left, right, top, bottom);
-      course.push({ par, tee, cup, walls, bumpers, fairway });
+      const { walls, bumpers, angled } = createObstacles(rand, tee, cup, left, right, top, bottom);
+      course.push({ par, tee, cup, walls, bumpers, angled, fairway });
     }
     return course;
   }
@@ -487,6 +523,7 @@
   function createObstacles(rand, tee, cup, left, right, top, bottom) {
     const walls = [];
     const bumpers = [];
+    const angled = [];
     const obstacles = 3 + Math.floor(rand() * 4);
     let attempts = 0;
     for (let i = 0; i < obstacles && attempts < 200; ) {
@@ -542,7 +579,41 @@
       bumpers.push(b);
       i++;
     }
-    return { walls, bumpers };
+    // Add angled walls (segments)
+    const angledCount = 2 + Math.floor(rand() * 2);
+    attempts = 0;
+    for (let i = 0; i < angledCount && attempts < 200; ) {
+      attempts++;
+      const len = 120 + Math.floor(rand() * 180);
+      const angle = rand() * Math.PI * 2;
+      const t = 14 + Math.floor(rand() * 6);
+      const cx = left + 120 + Math.floor(rand() * Math.max(120, right - left - 240));
+      const cy = top + 120 + Math.floor(rand() * Math.max(120, bottom - top - 240));
+      const x1 = cx - Math.cos(angle) * len * 0.5;
+      const y1 = cy - Math.sin(angle) * len * 0.5;
+      const x2 = cx + Math.cos(angle) * len * 0.5;
+      const y2 = cy + Math.sin(angle) * len * 0.5;
+      const seg = { x1, y1, x2, y2, t };
+      // bounds check
+      const bb = segmentBoundingBox(seg, t + 8);
+      if (bb.x < left + 20 || bb.x + bb.w > right - 20 || bb.y < top + 20 || bb.y + bb.h > bottom - 20) continue;
+      // avoid tee/cup proximity
+      if (pointToSegmentDistance(tee.x, tee.y, x1, y1, x2, y2) < 60) continue;
+      if (pointToSegmentDistance(cup.x, cup.y, x1, y1, x2, y2) < 60) continue;
+      // keep main corridor reasonably clear
+      if (segmentsIntersect(tee.x, tee.y, cup.x, cup.y, x1, y1, x2, y2)) continue;
+      // avoid walls and bumpers
+      let bad = false;
+      for (let w of walls) { if (rectsOverlap(bb, w, 6)) { bad = true; break; } }
+      if (bad) continue;
+      for (let b of bumpers) { if (circleIntersectsRect(b.x, b.y, b.r + 8, bb)) { bad = true; break; } }
+      if (bad) continue;
+      for (let s of angled) { if (rectsOverlap(bb, segmentBoundingBox(s, s.t + 6), 0)) { bad = true; break; } }
+      if (bad) continue;
+      angled.push(seg);
+      i++;
+    }
+    return { walls, bumpers, angled };
   }
 
   function rectIntersectsCircle(rect, cx, cy, cr) {
@@ -595,6 +666,28 @@
   function segmentsIntersect(x1,y1,x2,y2,x3,y3,x4,y4) {
     function ccw(ax,ay,bx,by,cx,cy){ return (cy - ay) * (bx - ax) > (by - ay) * (cx - ax); }
     return (ccw(x1,y1,x3,y3,x4,y4) !== ccw(x2,y2,x3,y3,x4,y4)) && (ccw(x1,y1,x2,y2,x3,y3) !== ccw(x1,y1,x2,y2,x4,y4));
+  }
+
+  function segmentBoundingBox(seg, pad) {
+    const x = Math.min(seg.x1, seg.x2) - pad;
+    const y = Math.min(seg.y1, seg.y2) - pad;
+    const w = Math.abs(seg.x2 - seg.x1) + pad * 2;
+    const h = Math.abs(seg.y2 - seg.y1) + pad * 2;
+    return { x, y, w, h };
+  }
+
+  function closestPointOnSegment(ax, ay, bx, by, px, py) {
+    const vx = bx - ax, vy = by - ay;
+    const wx = px - ax, wy = py - ay;
+    const denom = vx*vx + vy*vy || 1;
+    let t = (wx*vx + wy*vy) / denom;
+    t = Math.max(0, Math.min(1, t));
+    return { x: ax + vx * t, y: ay + vy * t, t };
+  }
+
+  function pointToSegmentDistance(px, py, ax, ay, bx, by) {
+    const c = closestPointOnSegment(ax, ay, bx, by, px, py);
+    return Math.hypot(px - c.x, py - c.y);
   }
 
   // Simple deterministic PRNG and hash
