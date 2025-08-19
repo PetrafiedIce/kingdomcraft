@@ -104,6 +104,7 @@
     strokesEl.textContent = '0';
     bestEl.textContent = bestByHole[i] != null ? String(bestByHole[i]) : '—';
     draw();
+    build3DCourse();
   }
 
   function storageKeyForMode() {
@@ -186,23 +187,74 @@
     scene = new three.Scene();
     camera = new three.PerspectiveCamera(60, viewW / viewH, 0.1, 4000);
     camera.position.set(0, 120, -120);
-    const light = new three.DirectionalLight(0xffffff, 1.0);
-    light.position.set(120, 200, 120);
-    scene.add(light);
+    const dirLight = new three.DirectionalLight(0xffffff, 1.0);
+    dirLight.position.set(160, 220, 160);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024; dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 0.5; dirLight.shadow.camera.far = 2000;
+    scene.add(dirLight);
     scene.add(new three.AmbientLight(0xffffff, 0.35));
     // Ground plane (matches 2D view axes X,Z)
     const planeGeo = new three.PlaneGeometry(viewW, viewH, 1, 1);
-    const planeMat = new three.MeshPhongMaterial({ color: 0x0d3c2c, shininess: 10, transparent: true, opacity: 0.9 });
+    const planeMat = new three.MeshStandardMaterial({ color: 0x0d3c2c, roughness: 0.9, metalness: 0.0 });
     const ground = new three.Mesh(planeGeo, planeMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(viewW / 2, 0, viewH / 2);
+    ground.receiveShadow = true;
     scene.add(ground);
     // Ball
     const ballGeo = new three.SphereGeometry(ball.r, 24, 24);
-    const ballMat = new three.MeshPhongMaterial({ color: 0xffffff, shininess: 100 });
+    const ballMat = new three.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.0 });
     ballMesh = new three.Mesh(ballGeo, ballMat);
     ballMesh.position.set(ball.x, ball.r, ball.y);
+    ballMesh.castShadow = true;
     scene.add(ballMesh);
+
+    // 3D course geometry (simple extrusions)
+    build3DCourse();
+  }
+
+  function build3DCourse() {
+    if (!holes || !holes[holeIndex]) return;
+    const hole = holes[holeIndex];
+    // Remove old course meshes
+    for (let i = scene.children.length - 1; i >= 0; i--) {
+      const obj = scene.children[i];
+      if (obj.userData && obj.userData.isCourse) { scene.remove(obj); }
+    }
+    const wallMat = new three.MeshStandardMaterial({ color: 0xcfe9db, roughness: 0.8, metalness: 0.0 });
+    const bumperMat = new three.MeshStandardMaterial({ color: 0x2fd89b, roughness: 0.4, metalness: 0.2, emissive: 0x0a7f59, emissiveIntensity: 0.25 });
+
+    // Vertical walls -> boxes
+    for (let w of hole.walls) {
+      const geo = new three.BoxGeometry(w.w, 24, w.h);
+      const mesh = new three.Mesh(geo, wallMat);
+      mesh.position.set(w.x + w.w / 2, 12, w.y + w.h / 2);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.userData.isCourse = true;
+      scene.add(mesh);
+    }
+    // Angled walls -> thin boxes oriented along segment
+    for (let s of (hole.angled || [])) {
+      const len = Math.hypot(s.x2 - s.x1, s.y2 - s.y1);
+      const geo = new three.BoxGeometry(len, 22, s.t);
+      const mesh = new three.Mesh(geo, wallMat);
+      mesh.position.set((s.x1 + s.x2) / 2, 11, (s.y1 + s.y2) / 2);
+      const ang = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+      mesh.rotation.y = -ang; // rotate around Y to align in XZ
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.userData.isCourse = true;
+      scene.add(mesh);
+    }
+    // Bumpers -> cylinders
+    for (let b of (hole.bumpers || [])) {
+      const geo = new three.CylinderGeometry(b.r, b.r, 10, 24);
+      const mesh = new three.Mesh(geo, bumperMat);
+      mesh.position.set(b.x, 5, b.y);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.userData.isCourse = true;
+      scene.add(mesh);
+    }
   }
 
   function toggleView() {
@@ -211,10 +263,12 @@
     if (viewMode === 'top') {
       viewMode = 'third';
       canvas3d.style.display = '';
+      canvas.style.opacity = '0.08';
       viewBtn.textContent = 'View: 3rd';
     } else {
       viewMode = 'top';
       canvas3d.style.display = 'none';
+      canvas.style.opacity = '1';
       viewBtn.textContent = 'View: Top';
     }
   }
@@ -360,9 +414,7 @@
   // Rendering
   let nowMs = 0;
   function draw(aimPos) {
-    if (viewMode === 'third' && renderer) {
-      draw3D();
-    }
+    // draw3D happens continuously; we control which canvas is visible
     ctx.clearRect(0, 0, viewW, viewH);
 
     // Course background
@@ -509,12 +561,12 @@
   function draw3D() {
     // position camera behind ball
     if (!scene || !camera || !ballMesh) return;
-    const followDist = 140;
-    const lookAt = new three.Vector3(ball.x, 4, ball.y);
+    const followDist = 180;
+    const lookAt = new three.Vector3(ball.x, 6, ball.y);
     const dir = new three.Vector3(ball.vx, 0, ball.vy);
     if (dir.length() < 0.01) dir.set(1, 0, 0);
     dir.normalize();
-    const camPos = new three.Vector3(ball.x, 80, ball.y).addScaledVector(dir, -followDist).add(new three.Vector3(0, 40, 0));
+    const camPos = new three.Vector3(ball.x, 110, ball.y).addScaledVector(dir, -followDist).add(new three.Vector3(0, 50, 0));
     camera.position.copy(camPos);
     camera.lookAt(lookAt);
     ballMesh.position.set(ball.x, ball.r, ball.y);
