@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini Golf — Fresh Start</title>
+  <title>Modern Mini Golf</title>
   <meta name="description" content="A simple browser mini-golf game. Click to aim, drag to set power, release to swing.">
   <meta name="theme-color" content="#0b132b">
   <link rel="canonical" href="/">
@@ -15,15 +15,20 @@
 </head>
 <body>
   <header class="site-header">
-    <div class="brand">Mini Golf</div>
+    <div class="brand">Modern Mini Golf</div>
     <nav class="nav">
-      <button id="reset-btn" class="btn">Reset</button>
+      <button id="daily-btn" class="btn btn-ghost" title="Play the daily course">Daily</button>
+      <button id="endless-btn" class="btn btn-ghost" title="Play unlimited random holes">Endless</button>
+      <span class="divider" aria-hidden="true"></span>
+      <button id="reset-btn" class="btn">Reset Hole</button>
       <button id="next-btn" class="btn">Next Hole</button>
     </nav>
   </header>
 
   <main class="main">
     <aside class="hud">
+      <div class="stat"><span class="label">Mode</span><span id="mode-display">Daily</span></div>
+      <div class="stat" id="daily-row"><span class="label">Daily</span><span id="daily-id">—</span></div>
       <div class="stat"><span class="label">Hole</span><span id="hole-index">1</span></div>
       <div class="stat"><span class="label">Par</span><span id="hole-par">3</span></div>
       <div class="stat"><span class="label">Strokes</span><span id="strokes">0</span></div>

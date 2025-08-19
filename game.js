@@ -10,6 +10,10 @@
   const bestEl = document.getElementById('best');
   const resetBtn = document.getElementById('reset-btn');
   const nextBtn = document.getElementById('next-btn');
+  const dailyBtn = document.getElementById('daily-btn');
+  const endlessBtn = document.getElementById('endless-btn');
+  const modeDisplay = document.getElementById('mode-display');
+  const dailyIdEl = document.getElementById('daily-id');
 
   const DPR = Math.max(1, window.devicePixelRatio || 1);
   let viewW = canvas.width;
@@ -27,28 +31,46 @@
     draw();
   }
 
-  // Simple level data
-  const holes = [
-    { par: 3, tee: { x: 140, y: 420 }, cup: { x: 780, y: 120 }, walls: [
-      { x: 100, y: 80, w: 20, h: 380 },
-      { x: 100, y: 80, w: 760, h: 20 },
-      { x: 100, y: 440, w: 760, h: 20 },
-      { x: 860, y: 80, w: 20, h: 380 },
-      { x: 360, y: 240, w: 260, h: 20 },
-    ]},
-    { par: 2, tee: { x: 160, y: 380 }, cup: { x: 760, y: 180 }, walls: [
-      { x: 80, y: 80, w: 800, h: 20 },
-      { x: 80, y: 440, w: 800, h: 20 },
-      { x: 80, y: 80, w: 20, h: 380 },
-      { x: 860, y: 80, w: 20, h: 380 },
-      { x: 420, y: 180, w: 20, h: 220 },
-      { x: 540, y: 180, w: 20, h: 220 },
-    ]},
-  ];
+  // Game modes and procedural hole generator
+  const MODES = { DAILY: 'Daily', ENDLESS: 'Endless' };
+  let currentMode = MODES.DAILY;
+  let prng = mulberry32(getDailySeed());
+  let holes = generateCourse(prng);
+  updateModeUI();
+
+  function getDailySeed() {
+    const now = new Date();
+    const yyyy = now.getUTCFullYear();
+    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(now.getUTCDate()).padStart(2, '0');
+    const id = `${yyyy}-${mm}-${dd}`; // ISO UTC date
+    dailyIdEl.textContent = id;
+    return hashStringToInt(id);
+  }
+
+  function updateModeUI() {
+    modeDisplay.textContent = currentMode;
+    document.getElementById('daily-row').style.display = currentMode === MODES.DAILY ? 'flex' : 'none';
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    if (mode === MODES.DAILY) {
+      prng = mulberry32(getDailySeed());
+    } else {
+      const seed = Math.floor(Math.random() * 2**31);
+      dailyIdEl.textContent = '—';
+      prng = mulberry32(seed);
+    }
+    holes = generateCourse(prng);
+    bestByHole = loadBestForMode();
+    updateModeUI();
+    loadHole(0);
+  }
 
   let holeIndex = 0;
   let strokes = 0;
-  let bestByHole = JSON.parse(localStorage.getItem('golf:best') || '[]');
+  let bestByHole = loadBestForMode();
 
   const ball = { x: 0, y: 0, vx: 0, vy: 0, r: 8, rolling: false };
   const physics = { friction: 0.985, stop: 0.08, bounce: 0.85, maxPower: 16 };
@@ -65,10 +87,22 @@
     draw();
   }
 
+  function storageKeyForMode() {
+    if (currentMode === MODES.DAILY) {
+      const seed = getDailySeed();
+      return `golf:best:daily:${seed}`;
+    }
+    return 'golf:best:endless';
+  }
+
+  function loadBestForMode() {
+    try { return JSON.parse(localStorage.getItem(storageKeyForMode()) || '[]'); } catch { return []; }
+  }
+
   function saveBest() {
     if (bestByHole[holeIndex] == null || strokes < bestByHole[holeIndex]) {
       bestByHole[holeIndex] = strokes;
-      localStorage.setItem('golf:best', JSON.stringify(bestByHole));
+      localStorage.setItem(storageKeyForMode(), JSON.stringify(bestByHole));
       bestEl.textContent = String(strokes);
     }
   }
@@ -177,7 +211,7 @@
     ctx.fill();
 
     // Walls
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
     for (let w of holes[holeIndex].walls) ctx.fillRect(w.x, w.y, w.w, w.h);
 
     // Ball
@@ -214,6 +248,73 @@
     ctx.fillRect(80, 80, viewW - 160, viewH - 160);
   }
 
+  // Procedural course generation
+  function generateCourse(rand) {
+    const numHoles = 9;
+    const course = [];
+    for (let i = 0; i < numHoles; i++) {
+      const par = 2 + (i % 3);
+      const tee = { x: 120 + Math.floor(rand() * 140), y: 360 + Math.floor(rand() * 80) };
+      const cup = { x: 720 + Math.floor(rand() * 120), y: 120 + Math.floor(rand() * 120) };
+      const walls = createRandomWalls(rand, tee, cup);
+      course.push({ par, tee, cup, walls });
+    }
+    return course;
+  }
+
+  function createRandomWalls(rand, tee, cup) {
+    const walls = [];
+    const obstacles = 3 + Math.floor(rand() * 4);
+    for (let i = 0; i < obstacles; i++) {
+      const vertical = rand() > 0.5;
+      let rect;
+      if (vertical) {
+        const x = 160 + Math.floor(rand() * 640);
+        const y = 140 + Math.floor(rand() * 260);
+        const h = 60 + Math.floor(rand() * 240);
+        rect = { x, y, w: 16, h };
+      } else {
+        const x = 140 + Math.floor(rand() * 660);
+        const y = 160 + Math.floor(rand() * 240);
+        const w = 80 + Math.floor(rand() * 300);
+        rect = { x, y, w, h: 16 };
+      }
+      const safeRadius = 36;
+      if (rectIntersectsCircle(rect, tee.x, tee.y, safeRadius) || rectIntersectsCircle(rect, cup.x, cup.y, safeRadius)) {
+        continue;
+      }
+      walls.push(rect);
+    }
+    return walls;
+  }
+
+  function rectIntersectsCircle(rect, cx, cy, cr) {
+    const nearestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+    const nearestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+    const dx = cx - nearestX;
+    const dy = cy - nearestY;
+    return (dx*dx + dy*dy) <= cr*cr;
+  }
+
+  // Simple deterministic PRNG and hash
+  function mulberry32(a) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+  }
+
+  function hashStringToInt(str) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
   // Game loop
   let last = 0;
   function loop(ts) {
@@ -226,6 +327,8 @@
   // Controls
   resetBtn.addEventListener('click', () => loadHole(holeIndex));
   nextBtn.addEventListener('click', () => loadHole((holeIndex + 1) % holes.length));
+  dailyBtn.addEventListener('click', () => setMode(MODES.DAILY));
+  endlessBtn.addEventListener('click', () => setMode(MODES.ENDLESS));
 
   window.addEventListener('resize', resize);
 

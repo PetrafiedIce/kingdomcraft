@@ -9,5 +9,5 @@ app.use(compression());
 app.use(express.static(path.join(__dirname)));
 
 app.listen(PORT, () => {
-	console.log(`Golf game server running on http://localhost:${PORT}`);
+	console.log(`Modern Mini Golf running on http://localhost:${PORT}`);
 });
