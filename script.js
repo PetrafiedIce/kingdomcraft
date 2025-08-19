@@ -195,11 +195,11 @@
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
-      width = Math.floor(rect.width);
-      height = Math.floor(rect.height);
-      // Fit canvas to visible size
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
+      width = Math.ceil(rect.width);
+      height = Math.ceil(rect.height);
+      // Fit canvas to visible size (avoid rounding gaps)
+      canvas.width = Math.ceil(width * dpr);
+      canvas.height = Math.ceil(height * dpr);
       ctx.setTransform(1,0,0,1,0,0);
       ctx.scale(dpr, dpr);
       generateParticles();

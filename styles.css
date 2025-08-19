@@ -47,8 +47,8 @@ body {
   overflow-x: hidden;
 }
 
-/* Reduce text width for readability on ultra-wide screens */
-main { max-width: 1400px; margin-inline: auto; }
+/* Ensure hero/canvas remain full-bleed */
+.hero { overflow: hidden; }
 
 /* Ensure anchor targets are not hidden beneath sticky header */
 main section { scroll-margin-top: 90px; }
