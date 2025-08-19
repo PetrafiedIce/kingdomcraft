@@ -265,6 +265,7 @@
       canvas3d.style.display = '';
       canvas.style.opacity = '0.08';
       viewBtn.textContent = 'View: 3rd';
+      build3DCourse();
     } else {
       viewMode = 'top';
       canvas3d.style.display = 'none';
@@ -932,6 +933,7 @@
     if (!last) last = ts; const dt = Math.min(32, ts - last); last = ts;
     nowMs = ts;
     step(dt);
+    if (viewMode === 'third') draw3D();
     draw(aimPosCache);
     requestAnimationFrame(loop);
   }
