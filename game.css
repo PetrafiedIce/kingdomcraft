@@ -45,31 +45,26 @@ body {
 .btn-ghost:active { transform: translateY(1px); }
 .divider { width: 1px; height: 28px; background: rgba(255,255,255,0.1); margin: 0 6px; display: inline-block; }
 
-.main { display: grid; grid-template-columns: 280px 1fr; gap: 16px; padding: 16px; max-width: 1200px; margin: 0 auto; }
-.hud { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid rgba(56,217,150,0.18); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+.main { position: relative; height: 100vh; width: 100vw; overflow: hidden; padding: 0; }
 .stat { display: flex; align-items: center; justify-content: space-between; padding: 10px 8px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 8px; }
 .label { color: var(--muted); font-weight: 600; }
 .hint { margin-top: 10px; color: var(--muted); font-size: 14px; }
 
-.stage { background: #09102a; border: 1px solid rgba(56,217,150,0.18); border-radius: 14px; display: grid; place-items: center; box-shadow: var(--shadow); }
-#game { width: 100%; height: auto; border-radius: 12px; display: block; }
+.stage { position: absolute; inset: 0; }
+#game { width: 100%; height: 100%; display: block; }
 
-.site-footer { text-align: center; color: var(--muted); padding: 18px; border-top: 1px solid rgba(56,217,150,0.18); }
+@media (max-width: 920px) { }
 
-@media (max-width: 920px) {
-  .main { grid-template-columns: 1fr; }
-}
+/* HUD Panel */
+.hud-panel { position: absolute; min-width: 260px; max-width: 380px; background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid rgba(56,217,150,0.18); border-radius: 14px; box-shadow: var(--shadow); padding: 8px; }
+.hud-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.drag-handle { cursor: move; user-select: none; padding: 4px 8px; color: var(--muted); }
+.hud-title { font-weight: 800; letter-spacing: 0.5px; }
+.controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
 
-/* Modal */
-.modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.55); padding: 16px; }
-.modal[aria-hidden="true"] { display: none; }
-.modal-content { width: min(720px, 92vw); background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid rgba(56,217,150,0.2); border-radius: 14px; box-shadow: var(--shadow); padding: 16px; }
-.modal-title { margin: 6px 4px 14px; }
-.upgrade-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-.upgrade-card { border: 1px solid rgba(56,217,150,0.25); border-radius: 12px; padding: 12px; background: rgba(255,255,255,0.03); display: grid; gap: 6px; }
-.upgrade-card h3 { margin: 0; font-size: 16px; }
-.upgrade-card p { margin: 0; color: var(--muted); font-size: 13px; }
-.upgrade-card .actions { display: flex; justify-content: flex-end; }
-.badge { display: inline-block; padding: 2px 8px; font-size: 12px; border-radius: 999px; border: 1px solid rgba(56,217,150,0.3); color: var(--text); background: rgba(56,217,150,0.12); }
-.modal-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+/* Collapsed state */
+.hud-panel[data-collapsed="true"] .hud-body { display: none; }
+.hud-panel[data-collapsed="true"] { padding: 6px 8px; }
+
+/* Removed upgrade modal styles */
 

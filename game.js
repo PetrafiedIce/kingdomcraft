@@ -14,11 +14,8 @@
   const endlessBtn = document.getElementById('endless-btn');
   const modeDisplay = document.getElementById('mode-display');
   const dailyIdEl = document.getElementById('daily-id');
-  const starsEl = document.getElementById('stars');
-  const upgradesSummaryEl = document.getElementById('upgrades-summary');
-  const upgradeModal = document.getElementById('upgrade-modal');
-  const upgradeOptionsEl = document.getElementById('upgrade-options');
-  const skipUpgradeBtn = document.getElementById('skip-upgrade');
+  const hudPanel = document.getElementById('hud-panel');
+  const collapseBtn = document.getElementById('collapse-btn');
 
   const DPR = Math.max(1, window.devicePixelRatio || 1);
   let viewW = canvas.width;
@@ -26,21 +23,24 @@
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
-    viewW = Math.max(640, Math.floor(rect.width));
-    viewH = Math.floor(viewW * 9/16);
-    canvas.style.height = viewH + 'px';
+    viewW = Math.floor(rect.width);
+    viewH = Math.floor(rect.height);
     canvas.width = Math.floor(viewW * DPR);
     canvas.height = Math.floor(viewH * DPR);
     ctx.setTransform(1,0,0,1,0,0);
     ctx.scale(DPR, DPR);
+    // Regenerate course to fit new size while keeping seed
+    holes = generateCourse(currentSeed);
+    loadHole(Math.min(holeIndex, holes.length - 1));
+    constrainHudPanel();
     draw();
   }
 
   // Game modes and procedural hole generator
   const MODES = { DAILY: 'Daily', ENDLESS: 'Endless' };
   let currentMode = MODES.DAILY;
-  let prng = mulberry32(getDailySeed());
-  let holes = generateCourse(prng);
+  let currentSeed = getDailySeed();
+  let holes = generateCourse(currentSeed);
   updateModeUI();
 
   function getDailySeed() {
@@ -61,19 +61,14 @@
   function setMode(mode) {
     currentMode = mode;
     if (mode === MODES.DAILY) {
-      prng = mulberry32(getDailySeed());
+      currentSeed = getDailySeed();
     } else {
       const seed = Math.floor(Math.random() * 2**31);
       dailyIdEl.textContent = '—';
-      prng = mulberry32(seed);
+      currentSeed = seed;
     }
-    holes = generateCourse(prng);
+    holes = generateCourse(currentSeed);
     bestByHole = loadBestForMode();
-    // reload stars and upgrades for this mode/day
-    stars = loadStars();
-    upgrades = loadUpgrades();
-    updateStarsUI();
-    updateUpgradesSummary();
     updateModeUI();
     loadHole(0);
   }
@@ -85,18 +80,7 @@
   const ball = { x: 0, y: 0, vx: 0, vy: 0, r: 8, rolling: false };
   const physics = { friction: 0.985, stop: 0.08, bounce: 0.85, maxPower: 16 };
 
-  // Progression
-  const UPGRADE_TYPES = [
-    { key: 'power', name: 'Power', desc: 'Increase swing power for longer shots.', max: 5, cost: level => 2 + level },
-    { key: 'guide', name: 'Guide', desc: 'Longer trajectory preview while aiming.', max: 5, cost: level => 2 + level },
-    { key: 'friction', name: 'Roll', desc: 'Ball keeps rolling longer (lower friction).', max: 5, cost: level => 2 + level },
-    { key: 'bounce', name: 'Bounce', desc: 'Balls retain more speed after wall bounces.', max: 5, cost: level => 2 + level },
-    { key: 'magnet', name: 'Magnet Cup', desc: 'Slightly larger capture radius on the cup.', max: 5, cost: level => 3 + level },
-  ];
-  let stars = loadStars();
-  let upgrades = loadUpgrades();
-  updateStarsUI();
-  updateUpgradesSummary();
+  // No upgrades; keep base physics
 
   function loadHole(i) {
     const hole = holes[i];
@@ -130,47 +114,55 @@
     }
   }
 
-  function storageBaseForMode() {
-    if (currentMode === MODES.DAILY) return `golf:${getDailySeed()}`;
-    return 'golf:endless';
-  }
+  // --- HUD Dragging & Collapse ---
+  const dragHandle = hudPanel.querySelector('.drag-handle');
+  let isHudDragging = false;
+  let hudDragOffset = { x: 0, y: 0 };
+  dragHandle.addEventListener('mousedown', (e) => {
+    isHudDragging = true;
+    const rect = hudPanel.getBoundingClientRect();
+    hudDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    // ensure left-based positioning for drag
+    hudPanel.style.right = '';
+    hudPanel.style.left = rect.left + 'px';
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!isHudDragging) return;
+    const x = Math.max(8, Math.min(window.innerWidth - hudPanel.offsetWidth - 8, e.clientX - hudDragOffset.x));
+    const y = Math.max(8, Math.min(window.innerHeight - hudPanel.offsetHeight - 8, e.clientY - hudDragOffset.y));
+    hudPanel.style.left = x + 'px';
+    hudPanel.style.top = y + 'px';
+  });
+  window.addEventListener('mouseup', () => { isHudDragging = false; });
 
-  function loadStars() {
-    try { return Number(localStorage.getItem(`${storageBaseForMode()}:stars`) || '0'); } catch { return 0; }
-  }
+  collapseBtn.addEventListener('click', () => {
+    const collapsed = hudPanel.getAttribute('data-collapsed') === 'true';
+    if (collapsed) {
+      hudPanel.setAttribute('data-collapsed', 'false');
+    } else {
+      // Snap to nearest side
+      const rect = hudPanel.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const dockRight = centerX > window.innerWidth / 2;
+      hudPanel.dataset.dock = dockRight ? 'right' : 'left';
+      if (dockRight) {
+        hudPanel.style.right = '16px';
+        hudPanel.style.left = '';
+      } else {
+        hudPanel.style.left = '16px';
+        hudPanel.style.right = '';
+      }
+      hudPanel.setAttribute('data-collapsed', 'true');
+    }
+  });
 
-  function saveStars() {
-    localStorage.setItem(`${storageBaseForMode()}:stars`, String(stars));
-  }
-
-  function updateStarsUI() {
-    starsEl.textContent = String(stars);
-  }
-
-  function loadUpgrades() {
-    try { return JSON.parse(localStorage.getItem(`${storageBaseForMode()}:upgrades`) || '{}'); } catch { return {}; }
-  }
-
-  function saveUpgrades() {
-    localStorage.setItem(`${storageBaseForMode()}:upgrades`, JSON.stringify(upgrades));
-  }
-
-  function getUpgradeLevel(key) {
-    return Math.max(0, Math.min(5, (upgrades[key] || 0)));
-  }
-
-  function setUpgradeLevel(key, level) {
-    upgrades[key] = Math.max(0, Math.min(5, level));
-    saveUpgrades();
-    updateUpgradesSummary();
-  }
-
-  function updateUpgradesSummary() {
-    const parts = UPGRADE_TYPES
-      .map(u => ({ n: u.name, l: getUpgradeLevel(u.key) }))
-      .filter(x => x.l > 0)
-      .map(x => `${x.n} +${x.l}`);
-    upgradesSummaryEl.textContent = parts.length ? parts.join(', ') : 'None';
+  function constrainHudPanel() {
+    const rect = hudPanel.getBoundingClientRect();
+    let x = rect.left, y = rect.top;
+    x = Math.max(8, Math.min(window.innerWidth - rect.width - 8, x));
+    y = Math.max(8, Math.min(window.innerHeight - rect.height - 8, y));
+    hudPanel.style.left = x + 'px';
+    hudPanel.style.top = y + 'px';
   }
 
   // Input handling
@@ -210,9 +202,8 @@
     if (!ball.rolling) return;
     ball.x += ball.vx;
     ball.y += ball.vy;
-    const fr = Math.min(0.998, physics.friction + getUpgradeLevel('friction') * 0.002);
-    ball.vx *= fr;
-    ball.vy *= fr;
+    ball.vx *= physics.friction;
+    ball.vy *= physics.friction;
 
     // Walls (level geometry)
     const walls = holes[holeIndex].walls;
@@ -223,32 +214,30 @@
         const prevX = ball.x - ball.vx;
         const prevY = ball.y - ball.vy;
         if (prevX + ball.r <= w.x || prevX - ball.r >= w.x + w.w) {
-          ball.vx = -ball.vx * getBounce();
+          ball.vx = -ball.vx * physics.bounce;
           if (ball.x < w.x) ball.x = w.x - ball.r; else if (ball.x > w.x + w.w) ball.x = w.x + w.w + ball.r;
         }
         if (prevY + ball.r <= w.y || prevY - ball.r >= w.y + w.h) {
-          ball.vy = -ball.vy * getBounce();
+          ball.vy = -ball.vy * physics.bounce;
           if (ball.y < w.y) ball.y = w.y - ball.r; else if (ball.y > w.y + w.h) ball.y = w.y + w.h + ball.r;
         }
       }
     }
 
     // Borders
-    if (ball.x - ball.r < 80) { ball.x = 80 + ball.r; ball.vx = -ball.vx * getBounce(); }
-    if (ball.x + ball.r > 880) { ball.x = 880 - ball.r; ball.vx = -ball.vx * getBounce(); }
-    if (ball.y - ball.r < 80) { ball.y = 80 + ball.r; ball.vy = -ball.vy * getBounce(); }
-    if (ball.y + ball.r > 460) { ball.y = 460 - ball.r; ball.vy = -ball.vy * getBounce(); }
+    const left = 80, right = viewW - 80, top = 80, bottom = viewH - 80;
+    if (ball.x - ball.r < left) { ball.x = left + ball.r; ball.vx = -ball.vx * physics.bounce; }
+    if (ball.x + ball.r > right) { ball.x = right - ball.r; ball.vx = -ball.vx * physics.bounce; }
+    if (ball.y - ball.r < top) { ball.y = top + ball.r; ball.vy = -ball.vy * physics.bounce; }
+    if (ball.y + ball.r > bottom) { ball.y = bottom - ball.r; ball.vy = -ball.vy * physics.bounce; }
 
     // Cup (hole)
     const cup = holes[holeIndex].cup;
     const dist = Math.hypot(ball.x - cup.x, ball.y - cup.y);
-    if (dist < getCaptureRadius()) {
+    if (dist < 14) {
       // sink the ball
       ball.rolling = false; ball.vx = 0; ball.vy = 0; ball.x = cup.x; ball.y = cup.y;
       saveBest();
-      const gained = awardStarsOnFinish();
-      if (gained > 0) { updateStarsUI(); }
-      maybeOfferUpgrade();
     }
 
     if (Math.hypot(ball.vx, ball.vy) < physics.stop) {
@@ -284,6 +273,7 @@
     ctx.fill();
 
     // Walls
+    // constant border rectangles for world bounds
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
     for (let w of holes[holeIndex].walls) ctx.fillRect(w.x, w.y, w.w, w.h);
 
@@ -300,14 +290,14 @@
       const dx = dragStart.x - aimPos.x;
       const dy = dragStart.y - aimPos.y;
       const mag = Math.hypot(dx, dy);
-      const maxP = getMaxPower();
+      const maxP = physics.maxPower;
       const n = Math.min(maxP, mag / 12);
       const angle = Math.atan2(dy, dx);
       const pvx = n * Math.cos(angle);
       const pvy = n * Math.sin(angle);
 
       // Trajectory preview
-      const pts = simulateTrajectory(ball.x, ball.y, pvx, pvy, 120 + getUpgradeLevel('guide') * 40);
+      const pts = simulateTrajectory(ball.x, ball.y, pvx, pvy, 140);
       ctx.setLineDash([6, 8]);
       ctx.lineDashOffset = -nowMs / 20;
       ctx.strokeStyle = 'rgba(56,217,150,0.9)';
@@ -362,40 +352,53 @@
   }
 
   // Procedural course generation
-  function generateCourse(rand) {
+  function generateCourse(seed) {
+    const rand = mulberry32(seed);
     const numHoles = 9;
     const course = [];
+    const left = 80, right = viewW - 80, top = 80, bottom = viewH - 80;
+    const width = right - left, height = bottom - top;
     for (let i = 0; i < numHoles; i++) {
       const par = 2 + (i % 3);
-      const tee = { x: 120 + Math.floor(rand() * 140), y: 360 + Math.floor(rand() * 80) };
-      const cup = { x: 720 + Math.floor(rand() * 120), y: 120 + Math.floor(rand() * 120) };
-      const walls = createRandomWalls(rand, tee, cup);
+      const tee = {
+        x: left + 40 + Math.floor(rand() * Math.max(40, width * 0.2)),
+        y: top + Math.floor(height * 0.6 + rand() * Math.max(40, height * 0.3))
+      };
+      const cup = {
+        x: right - 40 - Math.floor(rand() * Math.max(40, width * 0.2)),
+        y: top + 40 + Math.floor(rand() * Math.max(40, height * 0.3))
+      };
+      const walls = createRandomWalls(rand, tee, cup, left, right, top, bottom);
       course.push({ par, tee, cup, walls });
     }
     return course;
   }
 
-  function createRandomWalls(rand, tee, cup) {
+  function createRandomWalls(rand, tee, cup, left, right, top, bottom) {
     const walls = [];
     const obstacles = 3 + Math.floor(rand() * 4);
     let attempts = 0;
-    for (let i = 0; i < obstacles && attempts < 100; ) {
+    for (let i = 0; i < obstacles && attempts < 200; ) {
       attempts++;
       const vertical = rand() > 0.5;
       let rect;
       if (vertical) {
-        const x = 160 + Math.floor(rand() * 640);
-        const y = 140 + Math.floor(rand() * 260);
-        const h = 60 + Math.floor(rand() * 240);
+        const x = left + 60 + Math.floor(rand() * Math.max(40, (right - left - 120)));
+        const y = top + 40 + Math.floor(rand() * Math.max(40, (bottom - top - 80)));
+        const h = 60 + Math.floor(rand() * Math.max(40, (bottom - y - 100)));
         rect = { x, y, w: 16, h };
       } else {
-        const x = 140 + Math.floor(rand() * 660);
-        const y = 160 + Math.floor(rand() * 240);
-        const w = 80 + Math.floor(rand() * 300);
+        const x = left + 40 + Math.floor(rand() * Math.max(40, (right - left - 80)));
+        const y = top + 60 + Math.floor(rand() * Math.max(40, (bottom - top - 120)));
+        const w = 80 + Math.floor(rand() * Math.max(40, (right - x - 120)));
         rect = { x, y, w, h: 16 };
       }
       const safeRadius = 42;
       if (rectIntersectsCircle(rect, tee.x, tee.y, safeRadius) || rectIntersectsCircle(rect, cup.x, cup.y, safeRadius)) {
+        continue;
+      }
+      // Keep corridor clear between tee and cup
+      if (segmentIntersectsRect(tee.x, tee.y, cup.x, cup.y, expandRect(rect, 26))) {
         continue;
       }
       let overlaps = false;
@@ -424,6 +427,28 @@
              b.y + b.h + margin <= a.y);
   }
 
+  function expandRect(r, m) { return { x: r.x - m, y: r.y - m, w: r.w + 2*m, h: r.h + 2*m }; }
+
+  function pointInRect(px, py, r) { return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h; }
+
+  function segmentIntersectsRect(ax, ay, bx, by, r) {
+    if (pointInRect(ax, ay, r) || pointInRect(bx, by, r)) return true;
+    // Check intersection with each edge
+    const edges = [
+      [r.x, r.y, r.x + r.w, r.y],
+      [r.x + r.w, r.y, r.x + r.w, r.y + r.h],
+      [r.x + r.w, r.y + r.h, r.x, r.y + r.h],
+      [r.x, r.y + r.h, r.x, r.y]
+    ];
+    for (let e of edges) { if (segmentsIntersect(ax, ay, bx, by, e[0], e[1], e[2], e[3])) return true; }
+    return false;
+  }
+
+  function segmentsIntersect(x1,y1,x2,y2,x3,y3,x4,y4) {
+    function ccw(ax,ay,bx,by,cx,cy){ return (cy - ay) * (bx - ax) > (by - ay) * (cx - ax); }
+    return (ccw(x1,y1,x3,y3,x4,y4) !== ccw(x2,y2,x3,y3,x4,y4)) && (ccw(x1,y1,x2,y2,x3,y3) !== ccw(x1,y1,x2,y2,x4,y4));
+  }
+
   // Simple deterministic PRNG and hash
   function mulberry32(a) {
     return function() {
@@ -443,24 +468,16 @@
     return h >>> 0;
   }
 
-  // Helpers derived from upgrades
-  function getMaxPower() {
-    return physics.maxPower + getUpgradeLevel('power') * 2;
-  }
-
-  function getBounce() {
-    return Math.min(0.98, physics.bounce + getUpgradeLevel('bounce') * 0.03);
-  }
-
-  function getCaptureRadius() {
-    return 14 + getUpgradeLevel('magnet') * 1.2;
-  }
+  // Helpers (no upgrades)
+  function getMaxPower() { return physics.maxPower; }
+  function getBounce() { return physics.bounce; }
+  function getCaptureRadius() { return 14; }
 
   function simulateTrajectory(x, y, vx, vy, steps) {
     const pts = [];
     const cup = holes[holeIndex].cup;
     const walls = holes[holeIndex].walls;
-    const fr = Math.min(0.998, physics.friction + getUpgradeLevel('friction') * 0.002);
+    const fr = physics.friction;
     for (let i = 0; i < steps; i++) {
       x += vx; y += vy;
       vx *= fr; vy *= fr;
@@ -474,10 +491,11 @@
         }
       }
       // borders
-      if (x - ball.r < 80) { x = 80 + ball.r; vx = -vx * getBounce(); }
-      if (x + ball.r > 880) { x = 880 - ball.r; vx = -vx * getBounce(); }
-      if (y - ball.r < 80) { y = 80 + ball.r; vy = -vy * getBounce(); }
-      if (y + ball.r > 460) { y = 460 - ball.r; vy = -vy * getBounce(); }
+      const leftB = 80, rightB = viewW - 80, topB = 80, bottomB = viewH - 80;
+      if (x - ball.r < leftB) { x = leftB + ball.r; vx = -vx * physics.bounce; }
+      if (x + ball.r > rightB) { x = rightB - ball.r; vx = -vx * physics.bounce; }
+      if (y - ball.r < topB) { y = topB + ball.r; vy = -vy * physics.bounce; }
+      if (y + ball.r > bottomB) { y = bottomB - ball.r; vy = -vy * physics.bounce; }
       pts.push({ x, y });
       if (Math.hypot(vx, vy) < physics.stop) break;
       const dist = Math.hypot(x - cup.x, y - cup.y);
@@ -504,60 +522,7 @@
     ctx.stroke();
   }
 
-  function awardStarsOnFinish() {
-    const par = holes[holeIndex].par;
-    let gained = 1; // base
-    if (strokes <= par) gained += 1;
-    if (strokes === 1) gained += 2;
-    stars += gained;
-    saveStars();
-    return gained;
-  }
-
-  function maybeOfferUpgrade() {
-    // Offer after each hole
-    openUpgradeModal();
-  }
-
-  function openUpgradeModal() {
-    // Pick three random upgrades
-    const choices = [];
-    const pool = [...UPGRADE_TYPES];
-    while (choices.length < 3 && pool.length) {
-      const idx = Math.floor((Math.random()) * pool.length);
-      const u = pool.splice(idx, 1)[0];
-      choices.push(u);
-    }
-    upgradeOptionsEl.innerHTML = '';
-    for (let u of choices) {
-      const level = getUpgradeLevel(u.key);
-      const maxed = level >= u.max;
-      const cost = u.cost(level);
-      const canAfford = stars >= cost && !maxed;
-      const card = document.createElement('div');
-      card.className = 'upgrade-card';
-      const title = document.createElement('h3'); title.textContent = `${u.name} ${maxed ? '(Max)' : `Lv ${level} → ${level+1}`}`;
-      const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = maxed ? 'MAX' : `${cost}★`;
-      const p = document.createElement('p'); p.textContent = u.desc;
-      const actions = document.createElement('div'); actions.className = 'actions';
-      const btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = maxed ? 'Maxed' : 'Upgrade';
-      if (!canAfford) btn.classList.add('btn-ghost');
-      btn.disabled = !canAfford;
-      btn.addEventListener('click', () => {
-        stars -= cost; saveStars(); updateStarsUI();
-        setUpgradeLevel(u.key, level + 1);
-        closeUpgradeModal();
-      });
-      const header = document.createElement('div'); header.style.display = 'flex'; header.style.justifyContent = 'space-between'; header.appendChild(title); header.appendChild(badge);
-      actions.appendChild(btn);
-      card.appendChild(header); card.appendChild(p); card.appendChild(actions);
-      upgradeOptionsEl.appendChild(card);
-    }
-    upgradeModal.setAttribute('aria-hidden', 'false');
-  }
-
-  function closeUpgradeModal() { upgradeModal.setAttribute('aria-hidden', 'true'); }
-  skipUpgradeBtn.addEventListener('click', () => closeUpgradeModal());
+  // No upgrade modals
 
   // Game loop
   let last = 0;
@@ -576,6 +541,14 @@
   endlessBtn.addEventListener('click', () => setMode(MODES.ENDLESS));
 
   window.addEventListener('resize', resize);
+  // Ensure canvas fills viewport
+  function setCanvasToViewport() {
+    const main = document.querySelector('.main');
+    const rect = main.getBoundingClientRect();
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+  }
+  window.addEventListener('resize', setCanvasToViewport);
 
   // Init
   resize();

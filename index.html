@@ -14,50 +14,39 @@
   <link rel="stylesheet" href="game.css">
 </head>
 <body>
-  <header class="site-header">
-    <div class="brand">Modern Mini Golf</div>
-    <nav class="nav">
-      <button id="daily-btn" class="btn btn-ghost" title="Play the daily course">Daily</button>
-      <button id="endless-btn" class="btn btn-ghost" title="Play unlimited random holes">Endless</button>
-      <span class="divider" aria-hidden="true"></span>
-      <button id="reset-btn" class="btn">Reset Hole</button>
-      <button id="next-btn" class="btn">Next Hole</button>
-    </nav>
-  </header>
+  
 
   <main class="main">
-    <aside class="hud">
-      <div class="stat"><span class="label">Mode</span><span id="mode-display">Daily</span></div>
-      <div class="stat" id="daily-row"><span class="label">Daily</span><span id="daily-id">—</span></div>
-      <div class="stat"><span class="label">Stars</span><span id="stars">0</span></div>
-      <div class="stat"><span class="label">Upgrades</span><span id="upgrades-summary">None</span></div>
-      <div class="stat"><span class="label">Hole</span><span id="hole-index">1</span></div>
-      <div class="stat"><span class="label">Par</span><span id="hole-par">3</span></div>
-      <div class="stat"><span class="label">Strokes</span><span id="strokes">0</span></div>
-      <div class="stat"><span class="label">Best</span><span id="best">—</span></div>
-      <div class="hint">Drag to aim and set power. Release to swing.</div>
-    </aside>
+    <div id="hud-panel" class="hud-panel" data-dock="left" data-collapsed="false" style="left: 16px; top: 16px;">
+      <div class="hud-header">
+        <div class="drag-handle" title="Drag to move">≡</div>
+        <div class="hud-title">Modern Mini Golf</div>
+        <button id="collapse-btn" class="btn btn-ghost" title="Collapse">⟨⟩</button>
+      </div>
+      <div class="hud-body">
+        <div class="stat"><span class="label">Mode</span><span id="mode-display">Daily</span></div>
+        <div class="stat" id="daily-row"><span class="label">Daily</span><span id="daily-id">—</span></div>
+        <div class="stat"><span class="label">Hole</span><span id="hole-index">1</span></div>
+        <div class="stat"><span class="label">Par</span><span id="hole-par">3</span></div>
+        <div class="stat"><span class="label">Strokes</span><span id="strokes">0</span></div>
+        <div class="stat"><span class="label">Best</span><span id="best">—</span></div>
+        <div class="controls">
+          <button id="daily-btn" class="btn btn-ghost" title="Play the daily course">Daily</button>
+          <button id="endless-btn" class="btn btn-ghost" title="Play unlimited random holes">Endless</button>
+          <button id="reset-btn" class="btn">Reset Hole</button>
+          <button id="next-btn" class="btn">Next Hole</button>
+        </div>
+        <div class="hint">Drag to aim and set power. Release to swing.</div>
+      </div>
+    </div>
 
     <section class="stage">
-      <canvas id="game" width="960" height="540" aria-label="Mini-golf course" role="img"></canvas>
+      <canvas id="game" width="1920" height="1080" aria-label="Mini-golf course" role="img"></canvas>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <span>Built fresh — no legacy code.</span>
-  </footer>
-
-  <div id="upgrade-modal" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <h2 class="modal-title">Choose an upgrade</h2>
-      <div id="upgrade-options" class="upgrade-list"></div>
-      <div class="modal-actions">
-        <button id="skip-upgrade" class="btn btn-ghost">Skip</button>
-      </div>
-    </div>
-  </div>
+  
 
   <script src="game.js" defer></script>
 </body>
 </html>
-
