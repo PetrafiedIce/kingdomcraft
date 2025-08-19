@@ -175,6 +175,13 @@
         try { const cfg = JSON.parse(e.data); currentConfig = cfg; saveLocal(cfg); applyConfig(cfg); } catch(_) {}
       });
     } catch (_) { /* ignore SSE failure */ }
+
+    // Register Service Worker
+    try {
+      if ('serviceWorker' in navigator) {
+        await navigator.serviceWorker.register('/sw.js');
+      }
+    } catch (_) { /* ignore SW failure */ }
   })();
 
   const canvas = document.getElementById('particles-canvas');
