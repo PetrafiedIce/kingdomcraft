@@ -225,7 +225,7 @@
     }
 
     // Borders
-    const left = 80, right = viewW - 80, top = 80, bottom = viewH - 80;
+    const left = 0, right = viewW, top = 0, bottom = viewH;
     if (ball.x - ball.r < left) { ball.x = left + ball.r; ball.vx = -ball.vx * physics.bounce; }
     if (ball.x + ball.r > right) { ball.x = right - ball.r; ball.vx = -ball.vx * physics.bounce; }
     if (ball.y - ball.r < top) { ball.y = top + ball.r; ball.vy = -ball.vy * physics.bounce; }
@@ -340,15 +340,12 @@
   }
 
   function drawCourse() {
-    // Outer border
-    ctx.fillStyle = '#0c1537';
-    ctx.fillRect(60, 60, viewW - 120, viewH - 120);
-    // Inset grass
-    const grd = ctx.createLinearGradient(0, 60, 0, viewH - 60);
+    // Fullscreen background
+    const grd = ctx.createLinearGradient(0, 0, 0, viewH);
     grd.addColorStop(0, '#0d3c2c');
     grd.addColorStop(1, '#0b3326');
     ctx.fillStyle = grd;
-    ctx.fillRect(80, 80, viewW - 160, viewH - 160);
+    ctx.fillRect(0, 0, viewW, viewH);
   }
 
   // Procedural course generation
@@ -356,17 +353,17 @@
     const rand = mulberry32(seed);
     const numHoles = 9;
     const course = [];
-    const left = 80, right = viewW - 80, top = 80, bottom = viewH - 80;
+    const left = 0, right = viewW, top = 0, bottom = viewH;
     const width = right - left, height = bottom - top;
     for (let i = 0; i < numHoles; i++) {
       const par = 2 + (i % 3);
       const tee = {
-        x: left + 40 + Math.floor(rand() * Math.max(40, width * 0.2)),
-        y: top + Math.floor(height * 0.6 + rand() * Math.max(40, height * 0.3))
+        x: left + 60 + Math.floor(rand() * Math.max(40, width * 0.25)),
+        y: top + Math.floor(height * 0.65 + rand() * Math.max(40, height * 0.3))
       };
       const cup = {
-        x: right - 40 - Math.floor(rand() * Math.max(40, width * 0.2)),
-        y: top + 40 + Math.floor(rand() * Math.max(40, height * 0.3))
+        x: right - 60 - Math.floor(rand() * Math.max(40, width * 0.25)),
+        y: top + 60 + Math.floor(rand() * Math.max(40, height * 0.35))
       };
       const walls = createRandomWalls(rand, tee, cup, left, right, top, bottom);
       course.push({ par, tee, cup, walls });
@@ -384,14 +381,14 @@
       let rect;
       if (vertical) {
         const x = left + 60 + Math.floor(rand() * Math.max(40, (right - left - 120)));
-        const y = top + 40 + Math.floor(rand() * Math.max(40, (bottom - top - 80)));
-        const h = 60 + Math.floor(rand() * Math.max(40, (bottom - y - 100)));
-        rect = { x, y, w: 16, h };
+        const y = top + 40 + Math.floor(rand() * Math.max(40, (bottom - top - 120)));
+        const h = 80 + Math.floor(rand() * Math.max(40, (bottom - y - 140)));
+        rect = { x, y, w: 16, h: Math.min(h, bottom - y - 40) };
       } else {
-        const x = left + 40 + Math.floor(rand() * Math.max(40, (right - left - 80)));
-        const y = top + 60 + Math.floor(rand() * Math.max(40, (bottom - top - 120)));
-        const w = 80 + Math.floor(rand() * Math.max(40, (right - x - 120)));
-        rect = { x, y, w, h: 16 };
+        const x = left + 40 + Math.floor(rand() * Math.max(40, (right - left - 120)));
+        const y = top + 60 + Math.floor(rand() * Math.max(40, (bottom - top - 140)));
+        const w = 120 + Math.floor(rand() * Math.max(40, (right - x - 160)));
+        rect = { x, y, w: Math.min(w, right - x - 40), h: 16 };
       }
       const safeRadius = 42;
       if (rectIntersectsCircle(rect, tee.x, tee.y, safeRadius) || rectIntersectsCircle(rect, cup.x, cup.y, safeRadius)) {
@@ -491,7 +488,7 @@
         }
       }
       // borders
-      const leftB = 80, rightB = viewW - 80, topB = 80, bottomB = viewH - 80;
+      const leftB = 0, rightB = viewW, topB = 0, bottomB = viewH;
       if (x - ball.r < leftB) { x = leftB + ball.r; vx = -vx * physics.bounce; }
       if (x + ball.r > rightB) { x = rightB - ball.r; vx = -vx * physics.bounce; }
       if (y - ball.r < topB) { y = topB + ball.r; vy = -vy * physics.bounce; }
