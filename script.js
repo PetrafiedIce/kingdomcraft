@@ -212,10 +212,10 @@
 
     function rand(min, max) { return Math.random() * (max - min) + min; }
     function spawn() {
-      // Fill entire canvas horizontally; start an additional 25px lower
+      // Fill entire canvas horizontally; start an additional 20px lower from previous
       return {
         x: rand(-20, width + 20),
-        y: rand(height * 0.15 + 50, height + 50),
+        y: rand(height * 0.15 + 70, height + 70),
         r: rand(0.7, 2.2),
         vy: rand(-0.25, -0.8),
         vx: rand(-0.15, 0.15),
@@ -229,7 +229,7 @@
       ctx.clearRect(0, 0, width, height);
       for (let p of particles) {
         p.x += p.vx; p.y += p.vy; p.a *= 0.9995;
-        if (p.y < -10 || p.a < 0.02) Object.assign(p, spawn(), { y: height + 60 });
+        if (p.y < -10 || p.a < 0.02) Object.assign(p, spawn(), { y: height + 80 });
         if (p.x < -20) p.x = width + 20; else if (p.x > width + 20) p.x = -20;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fillStyle = `hsla(${p.hue}, 85%, 62%, ${p.a})`;
