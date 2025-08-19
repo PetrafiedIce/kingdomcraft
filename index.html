@@ -33,6 +33,7 @@
         <div class="controls">
           <button id="daily-btn" class="btn btn-ghost" title="Play the daily course">Daily</button>
           <button id="endless-btn" class="btn btn-ghost" title="Play unlimited random holes">Endless</button>
+          <button id="view-btn" class="btn btn-ghost" title="Toggle view">View: Top</button>
           <button id="reset-btn" class="btn">Reset Hole</button>
           <button id="next-btn" class="btn">Next Hole</button>
         </div>
@@ -42,11 +43,13 @@
 
     <section class="stage">
       <canvas id="game" width="1920" height="1080" aria-label="Mini-golf course" role="img"></canvas>
+      <canvas id="game3d" width="1920" height="1080" aria-label="3D Mini-golf course" role="img" style="display:none;"></canvas>
     </section>
   </main>
 
   
 
+  <script src="https://unpkg.com/three@0.157.0/build/three.min.js"></script>
   <script src="game.js" defer></script>
 </body>
 </html>

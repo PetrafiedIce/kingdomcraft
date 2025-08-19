@@ -3,6 +3,11 @@
 
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
+  const canvas3d = document.getElementById('game3d');
+  let three = window.THREE || null;
+  let scene = null, camera = null, renderer = null, ballMesh = null;
+  let viewMode = 'top'; // 'top' | 'third'
+  const viewBtn = document.getElementById('view-btn');
 
   const holeIndexEl = document.getElementById('hole-index');
   const holeParEl = document.getElementById('hole-par');
@@ -29,6 +34,13 @@
     canvas.height = Math.floor(viewH * DPR);
     ctx.setTransform(1,0,0,1,0,0);
     ctx.scale(DPR, DPR);
+    if (renderer && canvas3d) {
+      canvas3d.width = Math.floor(viewW * DPR);
+      canvas3d.height = Math.floor(viewH * DPR);
+      renderer.setSize(viewW, viewH, false);
+      camera.aspect = viewW / viewH;
+      camera.updateProjectionMatrix();
+    }
     // Regenerate course to fit new size while keeping seed
     holes = generateCourse(currentSeed);
     loadHole(Math.min(holeIndex, holes.length - 1));
@@ -163,6 +175,48 @@
     y = Math.max(8, Math.min(window.innerHeight - rect.height - 8, y));
     hudPanel.style.left = x + 'px';
     hudPanel.style.top = y + 'px';
+  }
+
+  function init3D() {
+    if (!window.THREE || !canvas3d) return;
+    three = window.THREE;
+    renderer = new three.WebGLRenderer({ canvas: canvas3d, antialias: true, alpha: true });
+    renderer.setPixelRatio(DPR);
+    renderer.setSize(viewW, viewH, false);
+    scene = new three.Scene();
+    camera = new three.PerspectiveCamera(60, viewW / viewH, 0.1, 4000);
+    camera.position.set(0, 120, -120);
+    const light = new three.DirectionalLight(0xffffff, 1.0);
+    light.position.set(120, 200, 120);
+    scene.add(light);
+    scene.add(new three.AmbientLight(0xffffff, 0.35));
+    // Ground plane (matches 2D view axes X,Z)
+    const planeGeo = new three.PlaneGeometry(viewW, viewH, 1, 1);
+    const planeMat = new three.MeshPhongMaterial({ color: 0x0d3c2c, shininess: 10, transparent: true, opacity: 0.9 });
+    const ground = new three.Mesh(planeGeo, planeMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.set(viewW / 2, 0, viewH / 2);
+    scene.add(ground);
+    // Ball
+    const ballGeo = new three.SphereGeometry(ball.r, 24, 24);
+    const ballMat = new three.MeshPhongMaterial({ color: 0xffffff, shininess: 100 });
+    ballMesh = new three.Mesh(ballGeo, ballMat);
+    ballMesh.position.set(ball.x, ball.r, ball.y);
+    scene.add(ballMesh);
+  }
+
+  function toggleView() {
+    if (!renderer) { init3D(); }
+    if (!renderer) return;
+    if (viewMode === 'top') {
+      viewMode = 'third';
+      canvas3d.style.display = '';
+      viewBtn.textContent = 'View: 3rd';
+    } else {
+      viewMode = 'top';
+      canvas3d.style.display = 'none';
+      viewBtn.textContent = 'View: Top';
+    }
   }
 
   // Input handling
@@ -306,6 +360,9 @@
   // Rendering
   let nowMs = 0;
   function draw(aimPos) {
+    if (viewMode === 'third' && renderer) {
+      draw3D();
+    }
     ctx.clearRect(0, 0, viewW, viewH);
 
     // Course background
@@ -449,6 +506,21 @@
     }
   }
 
+  function draw3D() {
+    // position camera behind ball
+    if (!scene || !camera || !ballMesh) return;
+    const followDist = 140;
+    const lookAt = new three.Vector3(ball.x, 4, ball.y);
+    const dir = new three.Vector3(ball.vx, 0, ball.vy);
+    if (dir.length() < 0.01) dir.set(1, 0, 0);
+    dir.normalize();
+    const camPos = new three.Vector3(ball.x, 80, ball.y).addScaledVector(dir, -followDist).add(new three.Vector3(0, 40, 0));
+    camera.position.copy(camPos);
+    camera.lookAt(lookAt);
+    ballMesh.position.set(ball.x, ball.r, ball.y);
+    renderer.render(scene, camera);
+  }
+
   function drawCourse() {
     // Fullscreen background
     const bg = ctx.createLinearGradient(0, 0, 0, viewH);
@@ -491,7 +563,8 @@
         ctx.beginPath();
         const mx = (1 - t) * (1 - t) * tee.x + 2 * (1 - t) * t * cpx + t * t * cup.x;
         const my = (1 - t) * (1 - t) * tee.y + 2 * (1 - t) * t * cpy + t * t * cup.y;
-        ctx.arc(mx, my, w * 0.35, 0, Math.PI * 2);
+        ctx.moveTo(mx - w * 0.35, my);
+        ctx.lineTo(mx + w * 0.35, my);
         ctx.stroke();
       }
     }
@@ -831,5 +904,7 @@
   resize();
   loadHole(0);
   requestAnimationFrame(loop);
+  init3D();
+  viewBtn.addEventListener('click', toggleView);
 })();
 
