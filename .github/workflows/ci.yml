@@ -19,5 +19,7 @@ jobs:
       - run: echo "DATABASE_URL=file:./dev.db" > .env
       - run: npx prisma db push
       - run: npx tsx prisma/seed.ts
+        env:
+          MOCK_DONUT_API: http://localhost:4000
       - run: npm run build
 
