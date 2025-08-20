@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { recomputeFlips } from '@/src/lib/server/flips'
-import '@/src/lib/server/buildCheck'
+import { recomputeFlips } from '@/lib/server/flips'
+import '@/lib/server/buildCheck'
 
 export async function POST() {
   const result = await recomputeFlips()

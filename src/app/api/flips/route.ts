@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getFlips } from '@/src/lib/server/flips'
-import '@/src/lib/server/buildCheck'
+import { getFlips } from '@/lib/server/flips'
+import '@/lib/server/buildCheck'
 
 export const dynamic = 'force-dynamic'
 
