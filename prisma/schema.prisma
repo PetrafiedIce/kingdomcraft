@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AuctionSnapshot {
+  id          String   @id @default(cuid())
+  capturedAt  DateTime @default(now())
+  itemName    String
+  itemId      String?
+  nbtHash     String?
+  quantity    Int
+  price       Int
+  seller      String?
+  endsAt      DateTime?
+  sourceRaw   String
+
+  @@index([capturedAt])
+  @@index([itemName, capturedAt])
+}
+
+model FlipRecipe {
+  id               String   @id @default(cuid())
+  name             String
+  inputItem        String
+  outputItem       String
+  inputPerCraft    Int
+  outputPerCraft   Int
+  inputStackSize   Int      @default(64)
+  outputStackSize  Int      @default(64)
+  isCompress919    Boolean  @default(false)
+  metadata         String?
+  active           Boolean  @default(true)
+
+  aliases          RecipeAlias[]
+  opportunities    FlipOpportunity[]
+
+  @@index([inputItem, outputItem])
+}
+
+model RecipeAlias {
+  id        String      @id @default(cuid())
+  alias     String
+  canonical String
+  recipe    FlipRecipe? @relation(fields: [recipeId], references: [id])
+  recipeId  String?
+  @@unique([alias])
+}
+
+model FlipOpportunity {
+  id                     String       @id @default(cuid())
+  computedAt             DateTime     @default(now())
+  recipeId               String
+  recipe                 FlipRecipe   @relation(fields: [recipeId], references: [id])
+  inputStackPrice        Int
+  outputStackPrice       Int
+  stacksOutPerStackIn    Float
+  grossPerInputStack     Int
+  profitPerStack         Int
+  roiPercent             Float
+  liquidityNote          String?
+  sampleListings         String?
+  score                  Float
+
+  @@index([computedAt])
+  @@index([roiPercent])
+}
+
