@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 14 16 22;
+  --muted: 148 163 184;
+}
+
+html, body, #__next {
+  height: 100%;
+}
+
+body {
+  background: rgb(var(--bg));
+  color: white;
+}
+
+.text-muted {
+  color: rgb(var(--muted));
+}
+
+.card {
+  @apply rounded-xl border border-white/10 bg-white/5 backdrop-blur p-4 shadow-sm;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors;
+}
+
+.btn-primary {
+  @apply bg-primary-600 hover:bg-primary-500 text-white;
+}
+
+.btn-ghost {
+  @apply bg-white/5 hover:bg-white/10 text-white;
+}
+
